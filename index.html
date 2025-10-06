@@ -26,7 +26,14 @@
     </div>
     <div class="col-md-4 text-end">
       <div>Time left: <span id="timer" class="timer fs-5">--:-</span></div>
-       <button id="retakeFromScore" type="button" class="btn btn-outline-primary">Retake (shuffle)</button>
+      <button id="retakeFromScore" type="button" class="btn btn-outline-primary" style="display:none;">Retake (shuffle)</button>
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-12 text-center">
+      <button id="quickTestBtn" type="button" class="btn btn-primary me-2">Quick Test</button>
+      <button id="customTestBtn" type="button" class="btn btn-info">Custom Test</button>
     </div>
   </div>
 
@@ -127,6 +134,60 @@
     </div>
   </div>
 
+  <!-- Custom Settings Modal -->
+  <div class="modal fade" id="customSettingsModal" tabindex="-1" aria-labelledby="customSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customSettingsModalLabel">Custom Test Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="customSettingsForm">
+            <div class="mb-3 form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="enableTimer" checked>
+              <label class="form-check-label" for="enableTimer">Enable Timer</label>
+            </div>
+            <div class="mb-3" id="timerSettings">
+              <label for="timerDuration" class="form-label">Timer Duration (minutes):</label>
+              <input type="number" class="form-control" id="timerDuration" value="10" min="1">
+              <div class="form-text">Set the total duration for the quiz.</div>
+              <div class="mt-2">
+                <label class="form-label">Timer Type:</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="timerType" id="timerTypeWhole" value="whole" checked>
+                  <label class="form-check-label" for="timerTypeWhole">Whole Test</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="timerType" id="timerTypePerQuestion" value="perQuestion">
+                  <label class="form-check-label" for="timerTypePerQuestion">Per Question</label>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="numQuestions" class="form-label">Number of Questions:</label>
+              <input type="number" class="form-control" id="numQuestions" value="10" min="10">
+            </div>
+            <div class="mb-3">
+              <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="enableSkip" checked>
+              <label class="form-check-label" for="enableSkip">Allow Skipping Questions</label>
+            </div>
+            <div class="mb-3" id="skipSettings">
+              <label for="skipCount" class="form-label">Number of Skips allowed:</label>
+              <input type="number" class="form-control" id="skipCount" value="0" min="0">
+              <div class="form-text">Set 0 for unlimited skips.</div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="startCustomTestBtn">Start Custom Test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- IMPORTANT: load Bootstrap JS first so `bootstrap` is available to our script -->
@@ -141,87 +202,724 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   // ---------------------- QUIZ DATA (JSON) ----------------------
-  const quizData = [
+  const quizDataOriginal = [
     {
-      "id": 1,
-      "question": "Which learning theory emphasizes the role of external reinforcement in shaping behaviour?",
-      "options": ["Constructivism","Behaviorism","Humanistic Theory","Cognitive Development Theory"],
-      "correctIndex": 1,
-      "explanation": "Behaviorism (Skinner, Pavlov) emphasizes observable behaviour and the role of external reinforcement and punishment in shaping behaviour."
+        "id": 1,
+        "question": "शिक्षा के किस दर्शनशास्त्रीय संप्रदाय का मानना है कि 'सत्य अपरिवर्तनीय है' और शिक्षा का उद्देश्य 'शाश्वत मूल्यों' को विकसित करना है?",
+        "options": ["प्रकृतिवाद (Naturalism)", "आदर्शवाद (Idealism)", "यथार्थवाद (Realism)", "व्यवहारवाद (Pragmatism)"],
+        "correctIndex": 1,
+        "explanation": "आदर्शवाद (Idealism) प्लेटो जैसे विचारकों पर आधारित है, जो मानते हैं कि अंतिम सत्य और मूल्य अपरिवर्तनीय (शाश्वत) हैं।"
     },
     {
-      "id": 2,
-      "question": "Who proposed the stages of cognitive development (sensorimotor, preoperational, concrete operational, formal operational)?",
-      "options": ["Vygotsky","Piaget","Bruner","Kohlberg"],
-      "correctIndex": 1,
-      "explanation": "Jean Piaget proposed the four-stage theory of cognitive development describing how children's thinking evolves qualitatively with age."
+        "id": 2,
+        "question": "किसने 'मनोसामाजिक विकास' (Psychosocial Development) के आठ चरणों का सिद्धांत प्रतिपादित किया?",
+        "options": ["सिगमंड फ्रायड (Sigmund Freud)", "जीन पियाजे (Jean Piaget)", "एरिक एरिकसन (Erik Erikson)", "बी.एफ. स्किनर (B.F. Skinner)"],
+        "correctIndex": 2,
+        "explanation": "एरिक एरिकसन ने मनोसामाजिक विकास के आठ चरणों का सिद्धांत दिया, जो जीवनकाल तक चलता है और पहचान संकट (Identity Crisis) पर ज़ोर देता है।"
     },
     {
-      "id": 3,
-      "question": "Zone of Proximal Development (ZPD) is a key concept in which theory?",
-      "options": ["Behaviorism","Constructivism","Sociocultural Theory","Multiple Intelligences"],
-      "correctIndex": 2,
-      "explanation": "Lev Vygotsky's Sociocultural Theory introduced ZPD — the gap between what a learner can do independently and with guidance."
+        "id": 3,
+        "question": "शिक्षण के किस स्तर में छात्र को 'समस्या को समझने, उसका विश्लेषण करने और संश्लेषण करने' की आवश्यकता होती है?",
+        "options": ["स्मृति स्तर (Memory Level)", "समझ स्तर (Understanding Level)", "चिंतनशील स्तर (Reflective Level)", "स्वायत्त विकास स्तर (Autonomous Development Level)"],
+        "correctIndex": 2,
+        "explanation": "चिंतनशील स्तर (Reflective Level) सबसे उच्च स्तर है, जिसमें छात्र समस्या-समाधान, समालोचनात्मक सोच और रचनात्मकता का उपयोग करता है।"
     },
     {
-      "id": 4,
-      "question": "Which assessment is primarily formative in nature?",
-      "options": ["Terminal examination","Monthly board exam","Diagnostic test after instruction","Weekly classroom quiz with feedback"],
-      "correctIndex": 3,
-      "explanation": "Weekly classroom quizzes with timely feedback are formative assessments aimed at monitoring learning and informing instruction."
+        "id": 4,
+        "question": "शोध अभिकल्प (Research Design) का कौन सा प्रकार 'कारण और प्रभाव' (Cause and Effect) संबंध स्थापित करने के लिए सबसे उपयुक्त है?",
+        "options": ["विवरणात्मक शोध (Descriptive Research)", "सहसंबंधात्मक शोध (Correlational Research)", "प्रायोगिक शोध (Experimental Research)", "ऐतिहासिक शोध (Historical Research)"],
+        "correctIndex": 2,
+        "explanation": "प्रायोगिक शोध (Experimental Research) में चरों में हेरफेर करके (Manipulation) कारण और प्रभाव संबंध स्थापित किया जाता है।"
     },
     {
-      "id": 5,
-      "question": "Bloom's taxonomy originally categorized cognitive objectives into how many levels?",
-      "options": ["3","4","6","7"],
-      "correctIndex": 2,
-      "explanation": "Bloom's original taxonomy (1956) described six cognitive levels: Knowledge, Comprehension, Application, Analysis, Synthesis, Evaluation."
+        "id": 5,
+        "question": "केंद्रीय प्रवृत्ति (Central Tendency) का वह कौन सा माप है जो 'सबसे अधिक बार' आने वाले स्कोर (Most Frequent Score) को दर्शाता है?",
+        "options": ["माध्य (Mean)", "माध्यिका (Median)", "बहुलक (Mode)", "मानक विचलन (Standard Deviation)"],
+        "correctIndex": 2,
+        "explanation": "बहुलक (Mode) वितरण में सबसे अधिक बार आने वाले मान को दर्शाता है।"
     },
     {
-      "id": 6,
-      "question": "Which method is best suited to study a single case in depth?",
-      "options": ["Survey method","Experimental method","Case study method","Correlation method"],
-      "correctIndex": 2,
-      "explanation": "Case study method involves an in-depth, contextualized investigation of a single individual, group, or institution."
+        "id": 6,
+        "question": "एनसीटीई (NCTE) का पूर्ण रूप क्या है?",
+        "options": ["नेशनल काउंसिल फॉर टीचर एजुकेशन (National Council for Teacher Education)", "नेशनल कमीशन फॉर ट्रेनिंग एंड इवैल्यूएशन (National Commission for Training and Evaluation)", "नेशनल करिकुलम फॉर टेक्निकल एजुकेशन (National Curriculum for Technical Education)", "नेशनल सेंटर फॉर टेस्ट इवैल्यूएशन (National Center for Test Evaluation)"],
+        "correctIndex": 0,
+        "explanation": "एनसीटीई (NCTE) भारत में शिक्षक शिक्षा की गुणवत्ता के लिए एक वैधानिक निकाय है।"
     },
     {
-      "id": 7,
-      "question": "Reliability of a test refers to: ",
-      "options": ["Accuracy of measurement","Consistency of measurement","Relevance to curriculum","Difficulty level"],
-      "correctIndex": 1,
-      "explanation": "Reliability indicates consistency or stability of test scores over time, across forms, or across items."
+        "id": 7,
+        "question": "समावेशी शिक्षा (Inclusive Education) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल विशेष आवश्यकता वाले बच्चों को अलग कक्षाओं में पढ़ाना", "सामान्य और विशेष आवश्यकता वाले बच्चों को एक ही कक्षा में एक साथ पढ़ाना", "विशेष स्कूलों की संख्या बढ़ाना", "प्रतिभाशाली छात्रों को अलग से प्रशिक्षण देना"],
+        "correctIndex": 1,
+        "explanation": "समावेशी शिक्षा सभी बच्चों को, चाहे उनकी क्षमताएं कुछ भी हों, एक सामान्य, अनुकूल वातावरण में एक साथ शिक्षा प्रदान करने पर केंद्रित है।"
     },
     {
-      "id": 8,
-      "question": "Which pedagogy strongly advocates learner-centred, inquiry-based learning and discovery?",
-      "options": ["Lecture method","Project-based/constructivist pedagogy","Rote learning","Direct instruction only"],
-      "correctIndex": 1,
-      "explanation": "Constructivist and project-based pedagogies promote learner-centred inquiry, active exploration and building understanding."
+        "id": 8,
+        "question": "शिक्षण-अधिगम प्रक्रिया में 'ब्लूम के वर्गीकरण' (Bloom's Taxonomy) का कौन सा डोमेन 'ज्ञान' और 'समझ' से संबंधित है?",
+        "options": ["संज्ञानात्मक डोमेन (Cognitive Domain)", "भावात्मक डोमेन (Affective Domain)", "मनोगत्यात्मक डोमेन (Psychomotor Domain)", "सामाजिक डोमेन (Social Domain)"],
+        "correctIndex": 0,
+        "explanation": "संज्ञानात्मक डोमेन (Cognitive Domain) ज्ञान, समझ, अनुप्रयोग, विश्लेषण, संश्लेषण और मूल्यांकन से संबंधित है।"
     },
     {
-      "id": 9,
-      "question": "What is 'authentic assessment'?",
-      "options": ["Multiple choice tests only","Assessment of real-world tasks and performances","Grading based on attendance","Standardized testing only"],
-      "correctIndex": 1,
-      "explanation": "Authentic assessment measures learners' ability to apply knowledge to real-world tasks, performances, or projects."
+        "id": 9,
+        "question": "मास कम्युनिकेशन के लिए किस तकनीक का उपयोग किया जाता है, जिसमें शिक्षक एक ही समय में बड़ी संख्या में शिक्षार्थियों को शिक्षा प्रदान कर सकता है?",
+        "options": ["टेलीकांफ्रेंसिंग (Teleconferencing)", "मूक (MOOCs)", "इंटरैक्टिव वीडियो (Interactive Video)", "सिमुलेशन (Simulation)"],
+        "correctIndex": 1,
+        "explanation": "मूक (Massive Open Online Courses) बड़े पैमाने पर खुले ऑनलाइन पाठ्यक्रम हैं, जो व्यापक पहुंच प्रदान करते हैं।"
     },
     {
-      "id": 10,
-      "question": "Which Indian education commission emphasized 'learning without burden' and recommended changes in the curriculum?",
-      "options": ["Kothari Commission","National Policy on Education 1986","Mudaliar Commission","Yashpal Committee"],
-      "correctIndex": 1,
-      "explanation": "The National Policy on Education (1986) and subsequent efforts emphasized reducing burden and stress on students and curricular reforms."
+        "id": 10,
+        "question": "भारतीय संविधान का कौन सा अनुच्छेद 'शिक्षा के अधिकार' (Right to Education) को एक मौलिक अधिकार बनाता है?",
+        "options": ["अनुच्छेद 21A", "अनुच्छेद 45", "अनुच्छेद 29", "अनुच्छेद 30"],
+        "correctIndex": 0,
+        "explanation": "86वें संविधान संशोधन (2002) द्वारा अनुच्छेद 21A जोड़ा गया, जो 6 से 14 वर्ष की आयु के बच्चों के लिए मुफ्त और अनिवार्य शिक्षा को मौलिक अधिकार बनाता है।"
+    },
+    {
+        "id": 11,
+        "question": "मानक विचलन (Standard Deviation) क्या मापता है?",
+        "options": ["केंद्रीय प्रवृत्ति (Central Tendency)", "प्रसरणशीलता (Variability) / फैलाव (Dispersion)", "सहसंबंध (Correlation)", "त्रुटि (Error)"],
+        "correctIndex": 1,
+        "explanation": "मानक विचलन केंद्रीय मान (माध्य) से डेटा के फैलाव (प्रसरणशीलता) को मापने के लिए सबसे विश्वसनीय माप है।"
+    },
+    {
+        "id": 12,
+        "question": "शिक्षण के लिए उपयोग किए जाने वाले 'स्वयं' (SWAYAM) प्लेटफॉर्म का उद्देश्य क्या है?",
+        "options": ["केवल व्यावसायिक प्रशिक्षण प्रदान करना", "स्कूल छात्रों के लिए खेल प्रतियोगिताएं आयोजित करना", "पहुँच, निष्पक्षता और गुणवत्ता के साथ मुफ्त ऑनलाइन पाठ्यक्रम प्रदान करना", "शोध अनुदान (Research Grants) वितरित करना"],
+        "correctIndex": 2,
+        "explanation": "स्वयं (Study Webs of Active-learning for Young Aspiring Minds) भारत सरकार का एक कार्यक्रम है जिसका उद्देश्य शिक्षा की पहुँच, निष्पक्षता और गुणवत्ता में सुधार करना है।"
+    },
+    {
+        "id": 13,
+        "question": "शोध में किस प्रकार की त्रुटि तब होती है जब 'शून्य परिकल्पना' (Null Hypothesis) सही होने पर भी उसे अस्वीकार कर दिया जाता है?",
+        "options": ["टाईप I त्रुटि (Type I Error)", "टाईप II त्रुटि (Type II Error)", "प्रणालीगत त्रुटि (Systematic Error)", "यादृच्छिक त्रुटि (Random Error)"],
+        "correctIndex": 0,
+        "explanation": "टाइप I त्रुटि (अल्फा त्रुटि) तब होती है जब एक सही शून्य परिकल्पना को अस्वीकार कर दिया जाता है।"
+    },
+    {
+        "id": 14,
+        "question": "कोहलबर्ग के नैतिक विकास के सिद्धांत (Kohlberg's Theory of Moral Development) में 'पुरस्कार से बचने और आज्ञाकारिता के प्रति उन्मुखीकरण' किस स्तर से संबंधित है?",
+        "options": ["पूर्व-पारंपरिक स्तर (Pre-conventional Level)", "पारंपरिक स्तर (Conventional Level)", "उत्तर-पारंपरिक स्तर (Post-conventional Level)", "स्व-स्वीकृत स्तर (Self-accepted Level)"],
+        "correctIndex": 0,
+        "explanation": "पूर्व-पारंपरिक स्तर में बच्चा सज़ा से बचने और पुरस्कार प्राप्त करने के आधार पर नैतिक निर्णय लेता है।"
+    },
+    {
+        "id": 15,
+        "question": "शिक्षा में 'प्रगतिवाद' (Progressivism) के जनक कौन माने जाते हैं?",
+        "options": ["प्लेटो (Plato)", "जॉन डीवी (John Dewey)", "रवींद्रनाथ टैगोर (Rabindranath Tagore)", "स्वामी विवेकानंद (Swami Vivekananda)"],
+        "correctIndex": 1,
+        "explanation": "जॉन डीवी को प्रगतिवाद का जनक माना जाता है, जो 'करके सीखने' (Learning by Doing) और छात्र-केंद्रित पाठ्यक्रम पर जोर देता है।"
+    },
+    {
+        "id": 16,
+        "question": "शैक्षिक प्रशासन में 'पीओएसडीकॉर्ब' (POSDCORB) का सूत्र किसने दिया?",
+        "options": ["एफ.डब्ल्यू. टेलर (F.W. Taylor)", "हेनरी फेयोल (Henri Fayol)", "लूथर गुलिक और उर्विक (Luther Gulick and Urwick)", "मैक्स वेबर (Max Weber)"],
+        "correctIndex": 2,
+        "explanation": "लूथर गुलिक और उर्विक ने 'पीओएसडीकॉर्ब' का सिद्धांत दिया, जिसका अर्थ है: योजना (Planning), आयोजन (Organizing), स्टाफिंग (Staffing), निर्देशन (Directing), समन्वय (Coordinating), रिपोर्टिंग (Reporting), और बजटिंग (Budgeting)।"
+    },
+    {
+        "id": 17,
+        "question": "शैक्षिक प्रौद्योगिकी में, 'सिस्टम दृष्टिकोण' (System Approach) क्या है?",
+        "options": ["केवल कंप्यूटर का उपयोग करना", "कक्षा में शिक्षक की भूमिका को नकारना", "शिक्षा के सभी घटकों (इनपुट, प्रक्रिया, आउटपुट) को परस्पर संबंधित मानकर उनका विश्लेषण करना", "केवल पुस्तकालय संसाधनों पर निर्भर रहना"],
+        "correctIndex": 2,
+        "explanation": "सिस्टम दृष्टिकोण शैक्षिक प्रक्रिया को एक प्रणाली के रूप में देखता है जहाँ सभी भाग (जैसे लक्ष्य, सामग्री, विधियाँ, मूल्यांकन) एक-दूसरे पर निर्भर करते हैं।"
+    },
+    {
+        "id": 18,
+        "question": "शैक्षिक अवसरों की समानता (Equality of Educational Opportunity) का अर्थ क्या है?",
+        "options": ["सभी के लिए एक ही स्कूल", "सभी छात्रों को समान ग्रेड देना", "प्रत्येक छात्र को उसकी योग्यता और क्षमता के अनुसार शिक्षा प्राप्त करने का अवसर देना", "निजी स्कूलों पर प्रतिबंध लगाना"],
+        "correctIndex": 2,
+        "explanation": "समानता का अर्थ है कि पृष्ठभूमि की परवाह किए बिना, सभी छात्रों को उनकी क्षमता को अधिकतम करने के लिए आवश्यक समर्थन और अवसर प्रदान किए जाएं।"
+    },
+    {
+        "id": 19,
+        "question": "किस आयोग/समिति ने 'दस-वर्षीय स्कूल' (10+2+3) की संरचना की सिफारिश की?",
+        "options": ["कोठारी आयोग (Kothari Commission, 1964-66)", "राधाकृष्णन आयोग (Radhakrishnan Commission, 1948-49)", "यशपाल समिति (Yashpal Committee, 1993)", "राष्ट्रीय शिक्षा नीति 1986 (NPE 1986)"],
+        "correctIndex": 0,
+        "explanation": "कोठारी आयोग (1964-66) ने शिक्षा की राष्ट्रीय प्रणाली के रूप में 10+2+3 संरचना की सिफारिश की।"
+    },
+    {
+        "id": 20,
+        "question": "मानसिक स्वास्थ्य (Mental Health) का अर्थ क्या है?",
+        "options": ["केवल शारीरिक बीमारी का न होना", "जीवन की चुनौतियों का सामना करने की क्षमता और भावनात्मक कल्याण", "उच्च शैक्षणिक योग्यता प्राप्त करना", "आर्थिक रूप से स्थिर होना"],
+        "correctIndex": 1,
+        "explanation": "मानसिक स्वास्थ्य में भावनात्मक, मनोवैज्ञानिक और सामाजिक कल्याण शामिल है; यह जीवन की चुनौतियों का सामना करने की व्यक्ति की क्षमता को प्रभावित करता है।"
+    },
+    {
+        "id": 21,
+        "question": "शोध में 'चर' (Variable) का कौन सा प्रकार शोधकर्ता द्वारा 'हेरफेर' (Manipulated) किया जाता है?",
+        "options": ["आश्रित चर (Dependent Variable)", "स्वतंत्र चर (Independent Variable)", "मध्यस्थ चर (Intervening Variable)", "बाह्य चर (Extraneous Variable)"],
+        "correctIndex": 1,
+        "explanation": "स्वतंत्र चर (Independent Variable) वह है जिसमें शोधकर्ता प्रभाव देखने के लिए हेरफेर (बदलाव) करता है।"
+    },
+    {
+        "id": 22,
+        "question": "बुद्धि (Intelligence) का 'बहु-कारक सिद्धांत' (Multiple Factor Theory) किसने दिया?",
+        "options": ["चार्ल्स स्पीयरमैन (Charles Spearman)", "एल.एल. थर्स्टन (L.L. Thurstone)", "जे.पी. गिलफोर्ड (J.P. Guilford)", "हॉवर्ड गार्डनर (Howard Gardner)"],
+        "correctIndex": 1,
+        "explanation": "एल.एल. थर्स्टन ने प्राथमिक मानसिक क्षमताओं (Primary Mental Abilities) के रूप में बुद्धि के सात अलग-अलग कारकों का वर्णन किया।"
+    },
+    {
+        "id": 23,
+        "question": "विद्यालयी पाठ्यक्रम (School Curriculum) के निर्माण का 'बाल-केंद्रित दृष्टिकोण' किस पर ज़ोर देता है?",
+        "options": ["शिक्षक की सुविधा", "परीक्षा के अंक", "बच्चे की आवश्यकताएँ, रुचियाँ और क्षमताएँ", "सरकारी नियम"],
+        "correctIndex": 2,
+        "explanation": "बाल-केंद्रित दृष्टिकोण बच्चे की व्यक्तिगत आवश्यकताओं, रुचियों और क्षमताओं को पाठ्यक्रम विकास के केंद्र में रखता है।"
+    },
+    {
+        "id": 24,
+        "question": "प्रतिक्रिया (Feedback) को तुरंत सुदृढ़ करने के लिए कौन सा शिक्षण उपकरण सबसे प्रभावी है?",
+        "options": ["ब्लैकबोर्ड", "पावरपॉइंट प्रेजेंटेशन", "इंटरैक्टिव व्हाइटबोर्ड", "प्रोग्राम्ड इंस्ट्रक्शन"],
+        "correctIndex": 3,
+        "explanation": "प्रोग्राम्ड इंस्ट्रक्शन (Programmed Instruction) स्किनर के सक्रिय अनुबंधन सिद्धांत पर आधारित है, जो तुरंत प्रतिक्रिया और सुदृढीकरण प्रदान करता है।"
+    },
+    {
+        "id": 25,
+        "question": "शैक्षिक नियोजन (Educational Planning) का सबसे बुनियादी चरण क्या है?",
+        "options": ["वित्तीय संसाधन जुटाना", "लक्ष्यों और उद्देश्यों का निर्धारण", "परियोजनाओं का क्रियान्वयन", "योजना का मूल्यांकन"],
+        "correctIndex": 1,
+        "explanation": "किसी भी नियोजन का पहला और बुनियादी चरण वांछित लक्ष्यों और उद्देश्यों को परिभाषित करना होता है।"
+    },
+    {
+        "id": 26,
+        "question": "योग शिक्षा (Yoga Education) का प्रमुख उद्देश्य क्या है?",
+        "options": ["केवल शारीरिक शक्ति बढ़ाना", "केवल आसन सिखाना", "शारीरिक, मानसिक और आध्यात्मिक विकास में समन्वय स्थापित करना", "रोजगार प्रदान करना"],
+        "correctIndex": 2,
+        "explanation": "योग का अंतिम लक्ष्य व्यक्ति के समग्र (शारीरिक, मानसिक, आध्यात्मिक) विकास और समन्वय को प्राप्त करना है।"
+    },
+    {
+        "id": 27,
+        "question": "मापन (Measurement) के किस स्तर पर 'वास्तविक शून्य बिंदु' (True Zero Point) होता है?",
+        "options": ["नामांकित (Nominal)", "क्रमसूचक (Ordinal)", "अंतराल (Interval)", "अनुपात (Ratio)"],
+        "correctIndex": 3,
+        "explanation": "अनुपात स्तर (Ratio Scale) में एक वास्तविक शून्य बिंदु होता है, जिसका अर्थ है 'कुछ भी नहीं' की अनुपस्थिति।"
+    },
+    {
+        "id": 28,
+        "question": "कोठारी आयोग (1964-66) की रिपोर्ट का शीर्षक क्या था?",
+        "options": ["विश्वविद्यालयी शिक्षा की समस्याएँ", "शिक्षा और राष्ट्रीय विकास (Education and National Development)", "स्कूल चलो अभियान", "शिक्षकों की स्थिति"],
+        "correctIndex": 1,
+        "explanation": "कोठारी आयोग (1964-66) की रिपोर्ट का शीर्षक 'शिक्षा और राष्ट्रीय विकास' था।"
+    },
+    {
+        "id": 29,
+        "question": "समूह गतिकी (Group Dynamics) में 'समूह संसक्ति' (Group Cohesiveness) का क्या अर्थ है?",
+        "options": ["समूह के सदस्यों के बीच लड़ाई", "समूह के लक्ष्यों की उपेक्षा करना", "सदस्यों के बीच आकर्षण और एकता की भावना", "केवल बाहरी दबाव के कारण एकजुट होना"],
+        "correctIndex": 2,
+        "explanation": "समूह संसक्ति वह डिग्री है जिस तक सदस्य समूह के प्रति आकर्षित होते हैं और एक साथ रहने के लिए प्रेरित होते हैं।"
+    },
+    {
+        "id": 30,
+        "question": "विकासात्मक मनोविज्ञान (Developmental Psychology) में 'प्रॉक्सिमोडिस्टल सिद्धांत' (Proximodistal Principle) का क्या अर्थ है?",
+        "options": ["सिर से पैर तक विकास", "शरीर के केंद्र से परिधि (बाहरी) की ओर विकास", "विकास लगातार होता है", "विकास एक चरणबद्ध प्रक्रिया है"],
+        "correctIndex": 1,
+        "explanation": "प्रॉक्सिमोडिस्टल सिद्धांत बताता है कि विकास रीढ़ (केंद्र) से शुरू होता है और हाथों और पैरों (परिधि) तक फैलता है।"
+    },
+    // Adding more questions (31-100) based on typical UGC NET topics
+    {
+        "id": 31,
+        "question": "रैखिक प्रोग्रामिंग (Linear Programming) और ब्रांचिंग प्रोग्रामिंग (Branching Programming) किस प्रकार के अनुदेशन के उदाहरण हैं?",
+        "options": ["प्रोग्राम्ड इंस्ट्रक्शन (Programmed Instruction)", "कंप्यूटर असिस्टेड इंस्ट्रक्शन (CAI)", "इंटरैक्टिव वीडियो", "सिमुलेशन"],
+        "correctIndex": 0,
+        "explanation": "बी.एफ. स्किनर ने रैखिक प्रोग्रामिंग और नॉर्मन क्रॉडर ने ब्रांचिंग प्रोग्रामिंग (या इंट्रिंसिक प्रोग्रामिंग) को प्रोग्राम्ड इंस्ट्रक्शन के तहत विकसित किया।"
+    },
+    {
+        "id": 32,
+        "question": "माइक्रोसॉफ्ट पावरप्वाइंट, गूगल स्लाइड्स जैसे उपकरण शिक्षण के किस प्रकार के सहायक सामग्री में आते हैं?",
+        "options": ["श्रव्य-सहायता", "दृश्य-सहायता", "श्रव्य-दृश्य-सहायता", "प्रिंट सामग्री"],
+        "correctIndex": 1,
+        "explanation": "प्रेजेंटेशन सॉफ़्टवेयर मुख्य रूप से दृश्य सामग्री (Visual Aids) प्रस्तुत करने के लिए उपयोग किए जाते हैं।"
+    },
+    {
+        "id": 33,
+        "question": "प्रबंधन (Management) में, 'एमबीओ' (MBO) का पूर्ण रूप क्या है?",
+        "options": ["मैनेंजमेंट बाय ऑब्जेक्टिव्स (Management by Objectives)", "मैक्सिमम बिज़नेस आउटपुट (Maximum Business Output)", "मेथड बेस्ड ऑर्गेनाइजेशन (Method Based Organization)", "मॉडर्न बजटिंग ऑपरेशन (Modern Budgeting Operation)"],
+        "correctIndex": 0,
+        "explanation": "एमबीओ (Management by Objectives) एक प्रबंधन रणनीति है जहां प्रबंधक और कर्मचारी मिलकर लक्ष्यों को परिभाषित करते हैं और उनके अनुसार प्रदर्शन का मूल्यांकन करते हैं।"
+    },
+    {
+        "id": 34,
+        "question": "किस दर्शनशास्त्री ने 'शिक्षा को मनुष्य और समाज के निर्माण' (Making of Man and Society) के रूप में देखा?",
+        "options": ["रूसो (Rousseau)", "रवींद्रनाथ टैगोर (Rabindranath Tagore)", "अरबिंदो घोष (Aurobindo Ghosh)", "महात्मा गांधी (Mahatma Gandhi)"],
+        "correctIndex": 3,
+        "explanation": "महात्मा गांधी ने शिक्षा को एक ऐसा साधन माना जिससे एक संतुलित और आत्मनिर्भर व्यक्ति (मनुष्य) और समाज का निर्माण होता है (बुनियादी शिक्षा/नई तालीम)।"
+    },
+    {
+        "id": 35,
+        "question": "शोध में 'साहित्य की समीक्षा' (Review of Literature) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल पहले किए गए शोधों की प्रतिलिपि बनाना", "अध्ययन के लिए एक सैद्धांतिक ढांचा (Theoretical Framework) प्रदान करना और अनुसंधान अंतराल (Research Gap) की पहचान करना", "शोधकर्ता को भ्रमित करना", "एक लंबी रिपोर्ट बनाना"],
+        "correctIndex": 1,
+        "explanation": "साहित्य की समीक्षा शोधकर्ता को विषय की पृष्ठभूमि, वर्तमान ज्ञान और 'अज्ञात' (शोध अंतराल) को जानने में मदद करती है।"
+    },
+    {
+        "id": 36,
+        "question": "व्यक्तित्व (Personality) के 'ट्रेड सिद्धांत' (Trait Theory) से कौन संबंधित है?",
+        "options": ["सिगमंड फ्रायड (Sigmund Freud)", "कार्ल रोजर्स (Carl Rogers)", "गॉर्डन आलपोर्ट (Gordon Allport)", "इवान पावलोव (Ivan Pavlov)"],
+        "correctIndex": 2,
+        "explanation": "गॉर्डन आलपोर्ट व्यक्तित्व के ट्रेड सिद्धांत के अग्रदूतों में से एक थे, जिन्होंने केंद्रीय, प्रमुख और द्वितीयक ट्रेड्स का वर्णन किया।"
+    },
+    {
+        "id": 37,
+        "question": "राष्ट्रीय ज्ञान आयोग (National Knowledge Commission - NKC) का गठन किस वर्ष किया गया था?",
+        "options": ["2005", "1986", "1992", "2010"],
+        "correctIndex": 0,
+        "explanation": "राष्ट्रीय ज्ञान आयोग का गठन 2005 में सैम पित्रोदा की अध्यक्षता में किया गया था, जिसका उद्देश्य ज्ञान-आधारित अर्थव्यवस्था के लिए भारत को तैयार करना था।"
+    },
+    {
+        "id": 38,
+        "question": "सीखने की प्रक्रिया में 'अंतर्दृष्टि' (Insight) पर किस सिद्धांतकार ने जोर दिया?",
+        "options": ["थॉर्नडाइक (Thorndike)", "कोहलर (Kohler)", "पावलोव (Pavlov)", "स्किनर (Skinner)"],
+        "correctIndex": 1,
+        "explanation": "गेस्टाल्ट मनोवैज्ञानिकों (कोहलर, कोफ्का) ने अंतर्दृष्टि सिद्धांत दिया, जिसमें अधिगम समस्या के अचानक और पूर्ण समाधान के रूप में होता है।"
+    },
+    {
+        "id": 39,
+        "question": "एक स्कूल में शिक्षक का वेतन किस प्रकार के वित्त पोषण (Financing) का उदाहरण है?",
+        "options": ["पूंजीगत व्यय (Capital Expenditure)", "आवर्ती/राजस्व व्यय (Recurring/Revenue Expenditure)", "अप्रत्याशित व्यय (Contingency Expenditure)", "गैर-योजना व्यय (Non-Plan Expenditure)"],
+        "correctIndex": 1,
+        "explanation": "वेतन जैसे दैनिक/मासिक खर्च आवर्ती या राजस्व व्यय के तहत आते हैं।"
+    },
+    {
+        "id": 40,
+        "question": "शिक्षा में 'मात्रात्मक शोध' (Quantitative Research) की मुख्य विशेषता क्या है?",
+        "options": ["व्याख्यात्मक और अर्थ-खोज (Interpretive and meaning-seeking)", "संख्यात्मक डेटा संग्रह और सांख्यिकीय विश्लेषण", "गहन व्यक्तिगत साक्षात्कार", "लचीला अभिकल्प (Flexible Design)"],
+        "correctIndex": 1,
+        "explanation": "मात्रात्मक शोध संख्यात्मक डेटा एकत्र करता है और सांख्यिकीय तरीकों का उपयोग करके सामान्यीकरण (Generalization) करने का प्रयास करता है।"
+    },
+    {
+        "id": 41,
+        "question": "'मस्तिष्क उद्देलन' (Brainstorming) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल आलोचना करना", "समस्या का केवल एक ही समाधान खोजना", "रचनात्मक और मुक्त विचारों का उत्पादन करना", "पुरानी जानकारी को याद करना"],
+        "correctIndex": 2,
+        "explanation": "मस्तिष्क उद्देलन (Brainstorming) एक समूह रचनात्मकता तकनीक है जिसका उद्देश्य विचारों की एक बड़ी संख्या उत्पन्न करना है।"
+    },
+    {
+        "id": 42,
+        "question": "शिक्षा के किस दर्शन में 'परियोजना पद्धति' (Project Method) का उपयोग करने पर ज़ोर दिया गया है?",
+        "options": ["आदर्शवाद (Idealism)", "यथार्थवाद (Realism)", "व्यवहारवाद/प्रयोजनवाद (Pragmatism)", "अस्तित्ववाद (Existentialism)"],
+        "correctIndex": 2,
+        "explanation": "प्रयोजनवाद (Pragmatism), जॉन डीवी से जुड़ा हुआ, 'करके सीखने' पर जोर देता है, और परियोजना पद्धति इसका एक उत्कृष्ट उदाहरण है।"
+    },
+    {
+        "id": 43,
+        "question": "मानसिक स्वास्थ्य में 'समायोजन' (Adjustment) का अर्थ क्या है?",
+        "options": ["हमेशा दूसरों को नियंत्रित करना", "वातावरण की आवश्यकताओं को पूरा करने के लिए व्यवहार को बदलना", "अपनी सभी इच्छाओं को दबाना", "अकेले रहना"],
+        "correctIndex": 1,
+        "explanation": "समायोजन वह प्रक्रिया है जिसके द्वारा एक व्यक्ति अपनी आवश्यकताओं और पर्यावरण की मांगों के बीच संतुलन स्थापित करता है।"
+    },
+    {
+        "id": 44,
+        "question": "शैक्षिक शोध में 'प्रमाणीकरण' (Standardization) का क्या महत्व है?",
+        "options": ["परीक्षण की लागत को कम करना", "परीक्षण की वैधता (Validity) और विश्वसनीयता (Reliability) सुनिश्चित करना", "परीक्षण को आसान बनाना", "केवल एक ही छात्र पर लागू करना"],
+        "correctIndex": 1,
+        "explanation": "प्रमाणीकरण (एकसमान प्रक्रिया) यह सुनिश्चित करता है कि परीक्षण वैध, विश्वसनीय हो और एक बड़े समूह पर लागू किया जा सके।"
+    },
+    {
+        "id": 45,
+        "question": "राष्ट्रीय शिक्षा नीति (NEP) 2020 में प्रस्तावित नई शैक्षिक संरचना क्या है?",
+        "options": ["10+2+3", "5+3+3+4", "4+3+3+5", "10+5"],
+        "correctIndex": 1,
+        "explanation": "एनईपी 2020 ने 10+2 संरचना को 5 (आधारभूत) + 3 (प्रारंभिक) + 3 (मध्य) + 4 (माध्यमिक) संरचना से प्रतिस्थापित करने का प्रस्ताव दिया।"
+    },
+    {
+        "id": 46,
+        "question": "शिक्षकों के लिए 'सेवाकालीन प्रशिक्षण' (In-service Training) का मुख्य उद्देश्य क्या है?",
+        "options": ["वेतन बढ़ाना", "नई शिक्षण विधियों और ज्ञान के साथ शिक्षकों को अद्यतन करना (Upgrading)", "शिक्षण कार्य कम करना", "केवल अवकाश प्रदान करना"],
+        "correctIndex": 1,
+        "explanation": "सेवाकालीन प्रशिक्षण शिक्षकों को अपनी दक्षता, ज्ञान और कौशल को नवीनतम प्रवृत्तियों के साथ अद्यतन करने में मदद करता है।"
+    },
+    {
+        "id": 47,
+        "question": "प्रगतिशील शिक्षा (Progressive Education) में मूल्यांकन (Evaluation) का सबसे अच्छा तरीका क्या है?",
+        "options": ["केवल वर्ष के अंत में परीक्षा", "मानकीकृत वस्तुनिष्ठ परीक्षण", "परियोजना कार्य, अवलोकन, पोर्टफोलियो और निरंतर मूल्यांकन", "केवल मौखिक परीक्षा"],
+        "correctIndex": 2,
+        "explanation": "प्रगतिशील शिक्षा व्यापक और निरंतर मूल्यांकन पर ज़ोर देती है जिसमें विभिन्न तरीके (परियोजना, पोर्टफोलियो) शामिल होते हैं।"
+    },
+    {
+        "id": 48,
+        "question": "शिक्षा में 'प्रौद्योगिकी' (Technology) का 'हार्डवेयर दृष्टिकोण' (Hardware Approach) क्या है?",
+        "options": ["सिद्धांतों और विचारों का उपयोग", "मशीनों, उपकरणों (जैसे कंप्यूटर, प्रोजेक्टर) का उपयोग", "शिक्षण विधियों का उपयोग", "पाठ्यक्रम डिजाइन"],
+        "correctIndex": 1,
+        "explanation": "हार्डवेयर दृष्टिकोण में भौतिक उपकरणों और मशीनों का उपयोग शामिल है, जबकि सॉफ्टवेयर दृष्टिकोण शिक्षण/अधिगम सिद्धांतों पर केंद्रित है।"
+    },
+    {
+        "id": 49,
+        "question": "शोध में 'अध्ययन की जनसंख्या' (Population of Study) से क्या तात्पर्य है?",
+        "options": ["केवल छात्र", "वह समूह जिसके बारे में शोधकर्ता निष्कर्ष निकालना चाहता है", "केवल शोधकर्ता", "शोध में उपयोग की जाने वाली पुस्तकों की संख्या"],
+        "correctIndex": 1,
+        "explanation": "जनसंख्या वह संपूर्ण समूह है जिसके बारे में शोधकर्ता निष्कर्ष निकालने या सामान्यीकरण करने में रुचि रखता है।"
+    },
+    {
+        "id": 50,
+        "question": "अधिगम (Learning) का वह सिद्धांत जो 'प्रयास और त्रुटि' (Trial and Error) पर आधारित है?",
+        "options": ["क्लासिकल कंडीशनिंग (Classical Conditioning)", "ऑपरेंट कंडीशनिंग (Operant Conditioning)", "अंतर्दृष्टि अधिगम (Insight Learning)", "कनेक्शनिज़्म/संबंधवाद (Connectionism)"],
+        "correctIndex": 3,
+        "explanation": "ई.एल. थॉर्नडाइक का कनेक्शनिज़्म प्रयास और त्रुटि अधिगम पर ज़ोर देता है, जिससे 'सीखने के नियम' (Laws of Learning) निकले।"
+    },
+    {
+        "id": 51,
+        "question": "पाठ्यक्रम (Curriculum) और पाठ्यचर्या (Syllabus) के बीच मुख्य अंतर क्या है?",
+        "options": ["कोई अंतर नहीं है", "पाठ्यक्रम व्यापक है और विद्यालय के सभी अनुभवों को शामिल करता है, जबकि पाठ्यचर्या किसी विशेष विषय का सार है", "पाठ्यचर्या व्यापक है", "पाठ्यक्रम केवल सैद्धांतिक पहलू है"],
+        "correctIndex": 1,
+        "explanation": "पाठ्यक्रम (Curriculum) एक व्यापक अवधारणा है जो स्कूल में छात्र के सभी अनुभवों को शामिल करती है, जबकि पाठ्यचर्या (Syllabus) किसी विशेष विषय या कोर्स का विवरण है।"
+    },
+    {
+        "id": 52,
+        "question": "शिक्षा का वह दर्शन जो 'मनुष्य के आत्म-अस्तित्व' और 'चयन की स्वतंत्रता' पर ज़ोर देता है?",
+        "options": ["आदर्शवाद (Idealism)", "यथार्थवाद (Realism)", "प्रकृतिवाद (Naturalism)", "अस्तित्ववाद (Existentialism)"],
+        "correctIndex": 3,
+        "explanation": "अस्तित्ववाद व्यक्ति की स्वतंत्रता, आत्म-परिभाषा और व्यक्तिगत पसंद के प्रति जिम्मेदारी पर ज़ोर देता है।"
+    },
+    {
+        "id": 53,
+        "question": "जीन पियाजे के संज्ञानात्मक विकास के सिद्धांत में 'वस्तु स्थायित्व' (Object Permanence) की समझ किस चरण में विकसित होती है?",
+        "options": ["संवेदी-गामक चरण (Sensorimotor Stage)", "पूर्व-संक्रियात्मक चरण (Pre-operational Stage)", "मूर्त संक्रियात्मक चरण (Concrete Operational Stage)", "अमूर्त संक्रियात्मक चरण (Formal Operational Stage)"],
+        "correctIndex": 0,
+        "explanation": "वस्तु स्थायित्व की समझ (एक वस्तु का अस्तित्व तब भी होता है जब वह दृष्टि से बाहर हो) संवेदी-गामक चरण के अंत में विकसित होती है।"
+    },
+    {
+        "id": 54,
+        "question": "शोध में 'बाह्य वैधता' (External Validity) का क्या अर्थ है?",
+        "options": ["शोध उपकरणों की सटीकता", "शोध उपकरणों की स्थिरता", "अध्ययन के परिणामों को अन्य जनसंख्या और सेटिंग्स पर सामान्यीकृत करने की सीमा", "शोध उपकरणों का उपयोग करना"],
+        "correctIndex": 2,
+        "explanation": "बाह्य वैधता यह बताती है कि किसी अध्ययन के निष्कर्षों को अध्ययन के दायरे से बाहर (जनसंख्या और सेटिंग्स) कितनी अच्छी तरह से लागू किया जा सकता है।"
+    },
+    {
+        "id": 55,
+        "question": "परीक्षण की 'विश्वसनीयता' (Reliability) से क्या अभिप्राय है?",
+        "options": ["परीक्षण का उद्देश्य मापना", "माप की निरंतरता और स्थिरता", "परीक्षण की लागत", "परीक्षण की गति"],
+        "correctIndex": 1,
+        "explanation": "विश्वसनीयता यह बताती है कि यदि एक ही परीक्षण को विभिन्न समय पर दोहराया जाता है तो परिणाम कितने सुसंगत और स्थिर होते हैं।"
+    },
+    {
+        "id": 56,
+        "question": "भारत में उच्च शिक्षा के लिए वित्त पोषण (Financing) का प्रमुख स्रोत कौन सा है?",
+        "options": ["छात्र शुल्क", "विश्वविद्यालय अनुदान आयोग (UGC)", "निजी दान", "गैर सरकारी संगठन (NGOs)"],
+        "correctIndex": 1,
+        "explanation": "विश्वविद्यालय अनुदान आयोग (UGC) भारत में उच्च शिक्षा के वित्त पोषण (केन्द्रीय फंडिंग) और समन्वय के लिए प्रमुख वैधानिक निकाय है।"
+    },
+    {
+        "id": 57,
+        "question": "समावेशी शिक्षा में 'बाधाएँ' (Barriers) क्या हैं?",
+        "options": ["शिक्षक का प्रशिक्षण", "अनुकूलनीय पाठ्यक्रम", "अगम्यता (Inaccessible) वाली इमारतें और नकारात्मक दृष्टिकोण", "सहकर्मी शिक्षण (Peer Learning)"],
+        "correctIndex": 2,
+        "explanation": "अगम्यता वाली भौतिक संरचनाएं और विकलांग व्यक्तियों के प्रति नकारात्मक दृष्टिकोण समावेशी शिक्षा के लिए प्रमुख बाधाएँ हैं।"
+    },
+    {
+        "id": 58,
+        "question": "'क्रियात्मक शोध' (Action Research) का मुख्य उद्देश्य क्या है?",
+        "options": ["बड़ी जनसंख्या के लिए सिद्धांत विकसित करना", "विद्यालय/कक्षा की विशिष्ट, तत्काल समस्या को हल करना", "ऐतिहासिक घटनाओं का पता लगाना", "वैज्ञानिक उपकरणों का विकास करना"],
+        "correctIndex": 1,
+        "explanation": "क्रियात्मक शोध शिक्षक या प्रशासक द्वारा अपनी स्थानीय, तत्काल, व्यावहारिक समस्याओं को हल करने के लिए किया जाता है।"
+    },
+    {
+        "id": 59,
+        "question": "ई-लर्निंग में 'सिंक्रोनस' (Synchronous) और 'असिंक्रोनस' (Asynchronous) अधिगम में क्या अंतर है?",
+        "options": ["सिंक्रोनस ऑफ़लाइन है और असिंक्रोनस ऑनलाइन है", "सिंक्रोनस एक ही समय में होता है (लाइव क्लास) और असिंक्रोनस अलग-अलग समय पर (रिकॉर्डेड लेक्चर)", "सिंक्रोनस महंगा है और असिंक्रोनस सस्ता है", "कोई अंतर नहीं"],
+        "correctIndex": 1,
+        "explanation": "सिंक्रोनस (जैसे लाइव वेबिनार) वास्तविक समय में होता है; असिंक्रोनस (जैसे ईमेल, रिकॉर्डेड वीडियो) अलग-अलग समय पर होता है।"
+    },
+    {
+        "id": 60,
+        "question": "मानवाधिकार शिक्षा (Human Rights Education) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल कानून के बारे में पढ़ाना", "व्यक्तियों को उनके अधिकारों और जिम्मेदारियों के बारे में जागरूक करना और उनका सम्मान करना सिखाना", "केवल राजनीतिक ज्ञान देना", "इतिहास पढ़ाना"],
+        "correctIndex": 1,
+        "explanation": "मानवाधिकार शिक्षा का उद्देश्य व्यक्तियों को उनके मानवाधिकारों को समझने, उनका सम्मान करने और उनकी रक्षा करने के लिए तैयार करना है।"
+    },
+    {
+        "id": 61,
+        "question": "माध्य, माध्यिका और बहुलक 'सामान्य वितरण वक्र' (Normal Distribution Curve) में कहाँ पर स्थित होते हैं?",
+        "options": ["वे अलग-अलग बिंदुओं पर स्थित होते हैं", "वे एक ही बिंदु पर (केंद्र) स्थित होते हैं", "माध्यिका हमेशा बहुलक से बड़ा होता है", "माध्य हमेशा बहुलक से छोटा होता है"],
+        "correctIndex": 1,
+        "explanation": "एक सामान्य वितरण वक्र में माध्य, माध्यिका और बहुलक का मान समान होता है और वे वक्र के केंद्र में स्थित होते हैं।"
+    },
+    {
+        "id": 62,
+        "question": "शैक्षिक पर्यवेक्षण (Educational Supervision) का आधुनिक दृष्टिकोण किस पर केंद्रित है?",
+        "options": ["शिक्षकों की गलतियाँ ढूँढना", "शिक्षकों को आदेश देना", "शिक्षण-अधिगम प्रक्रिया में सुधार के लिए रचनात्मक मार्गदर्शन और सहयोग", "केवल प्रशासनिक नियंत्रण"],
+        "correctIndex": 2,
+        "explanation": "आधुनिक पर्यवेक्षण सहयोगपूर्ण और विकासात्मक (Developmental) है, जिसका उद्देश्य शिक्षण-अधिगम प्रक्रिया की गुणवत्ता में सुधार करना है।"
+    },
+    {
+        "id": 63,
+        "question": "व्यक्तित्व के आकलन के लिए 'रोर्शा स्याही धब्बा परीक्षण' (Rorschach Inkblot Test) किस प्रकार का परीक्षण है?",
+        "options": ["वस्तुनिष्ठ परीक्षण (Objective Test)", "मानकीकृत उपलब्धि परीक्षण (Standardized Achievement Test)", "प्रक्षेपी तकनीक (Projective Technique)", "स्व-रिपोर्ट इन्वेंटरी (Self-Report Inventory)"],
+        "correctIndex": 2,
+        "explanation": "यह एक प्रक्षेपी तकनीक है जहां व्यक्ति की प्रतिक्रियाओं को उसके अवचेतन व्यक्तित्व को प्रकट करने के लिए माना जाता है।"
+    },
+    {
+        "id": 64,
+        "question": "किस आयोग ने 'शिक्षण को राष्ट्रीय विकास का केंद्रबिंदु' (Central to National Development) कहा?",
+        "options": ["राधाकृष्णन आयोग", "मुदालियर आयोग", "कोठारी आयोग", "यशपाल समिति"],
+        "correctIndex": 2,
+        "explanation": "कोठारी आयोग (1964-66) की रिपोर्ट का शीर्षक ही 'शिक्षा और राष्ट्रीय विकास' था, जिसने शिक्षा को राष्ट्र के भाग्य के निर्माण का केंद्रीय कारक बताया।"
+    },
+    {
+        "id": 65,
+        "question": "'शिक्षण की दक्षता' (Teaching Efficiency) का सबसे महत्वपूर्ण संकेतक क्या है?",
+        "options": ["शिक्षक का अनुभव", "छात्रों का उपलब्धि स्तर और विकास", "शिक्षक की उपस्थिति", "शिक्षक का वेतन"],
+        "correctIndex": 1,
+        "explanation": "शिक्षण की दक्षता का अंतिम और सबसे महत्वपूर्ण उपाय छात्रों के अधिगम (Learning), उपलब्धि और समग्र विकास में वृद्धि है।"
+    },
+    {
+        "id": 66,
+        "question": "शिक्षा में 'दूरस्थ शिक्षा' (Distance Education) की मुख्य विशेषता क्या है?",
+        "options": ["शिक्षक और शिक्षार्थी के बीच आमने-सामने की बातचीत", "शिक्षक और शिक्षार्थी समय और स्थान से अलग होते हैं", "केवल व्यावसायिक पाठ्यक्रम प्रदान करना", "केवल सरकारी संस्थानों द्वारा चलाया जाना"],
+        "correctIndex": 1,
+        "explanation": "दूरस्थ शिक्षा (Distance Education) में शिक्षक और शिक्षार्थी अलग-अलग स्थानों पर होते हैं और विभिन्न माध्यमों (प्रिंट, ऑनलाइन) से सीखते हैं।"
+    },
+    {
+        "id": 67,
+        "question": "अनुसंधान में 'गुणात्मक उपागम' (Qualitative Approach) के तहत कौन सी विधि आती है?",
+        "options": ["सर्वेक्षण (Survey)", "प्रायोगिक (Experimental)", "जातीयता-वर्णन (Ethnography)", "सहसंबंध (Correlation)"],
+        "correctIndex": 2,
+        "explanation": "जातीयता-वर्णन (Ethnography) एक गुणात्मक शोध पद्धति है जिसका उपयोग विशिष्ट संस्कृति या सामाजिक समूह का गहन अध्ययन करने के लिए किया जाता है।"
+    },
+    {
+        "id": 68,
+        "question": "किस प्रकार का मापन केवल 'वर्गीकरण' (Classification) पर आधारित है और इसमें कोई क्रम नहीं होता?",
+        "options": ["नामांकित (Nominal)", "क्रमसूचक (Ordinal)", "अंतराल (Interval)", "अनुपात (Ratio)"],
+        "correctIndex": 0,
+        "explanation": "नामांकित (Nominal) माप सबसे निम्नतम स्तर का है और केवल चरों को वर्गीकृत करने के लिए उपयोग किया जाता है (जैसे लिंग, धर्म)।"
+    },
+    {
+        "id": 69,
+        "question": "शिक्षा के किस दर्शन के अनुसार 'बच्चों को प्रकृति की गोद में' बिना किसी बाहरी हस्तक्षेप के बढ़ने देना चाहिए?",
+        "options": ["आदर्शवाद (Idealism)", "प्रकृतिवाद (Naturalism)", "यथार्थवाद (Realism)", "मानवतावाद (Humanism)"],
+        "correctIndex": 1,
+        "explanation": "प्रकृतिवाद (Naturalism), रूसो से जुड़ा हुआ, मानता है कि बच्चे को प्रकृति के नियमों के अनुसार विकसित होने दिया जाना चाहिए।"
+    },
+    {
+        "id": 70,
+        "question": "सीखने में 'सुदृढीकरण' (Reinforcement) की अवधारणा किस सिद्धांत से संबंधित है?",
+        "options": ["क्लासिकल कंडीशनिंग (Classical Conditioning)", "ऑपरेंट कंडीशनिंग (Operant Conditioning)", "सामाजिक अधिगम (Social Learning)", "संज्ञानात्मक अधिगम (Cognitive Learning)"],
+        "correctIndex": 1,
+        "explanation": "बी.एफ. स्किनर की ऑपरेंट कंडीशनिंग (सक्रिय अनुबंधन) में, सुदृढीकरण (सकारात्मक या नकारात्मक) भविष्य में व्यवहार की संभावना को बढ़ाता है।"
+    },
+    {
+        "id": 71,
+        "question": "राष्ट्रीय शिक्षा नीति 2020 में 'स्कूल कॉम्प्लेक्स' या 'स्कूल क्लस्टर' की अवधारणा का उद्देश्य क्या है?",
+        "options": ["केवल बड़े स्कूल बनाना", "शिक्षा के प्रशासन, संसाधनों और शिक्षकों को साझा करने के लिए स्कूलों का समूहीकरण", "निजी स्कूलों को बंद करना", "शिक्षण कार्य कम करना"],
+        "correctIndex": 1,
+        "explanation": "स्कूल कॉम्प्लेक्स/क्लस्टर का उद्देश्य स्कूलों के बीच सहयोग को बढ़ावा देना और संसाधनों (शिक्षक, पुस्तकालय, खेल का मैदान) को साझा करके दक्षता बढ़ाना है।"
+    },
+    {
+        "id": 72,
+        "question": "विद्यालय प्रबंधन (School Management) में 'विकेंद्रीकरण' (Decentralization) का क्या अर्थ है?",
+        "options": ["सभी निर्णय केंद्रीय प्राधिकरण द्वारा लेना", "निर्णय लेने की शक्ति को निचले स्तरों तक वितरित करना", "केवल प्राचार्य द्वारा निर्णय लेना", "निर्णय लेने की शक्ति को वापस लेना"],
+        "correctIndex": 1,
+        "explanation": "विकेंद्रीकरण में निर्णय लेने की शक्ति और जिम्मेदारी केंद्र से निचले स्तरों तक (जैसे शिक्षकों, स्थानीय समुदाय) वितरित की जाती है।"
+    },
+    {
+        "id": 73,
+        "question": "बुद्धि के 'जी और एस कारक' (G and S Factors) का सिद्धांत किसने दिया?",
+        "options": ["एल.एल. थर्स्टन (L.L. Thurstone)", "चार्ल्स स्पीयरमैन (Charles Spearman)", "आर.बी. कैटेल (R.B. Cattell)", "जे.पी. गिलफोर्ड (J.P. Guilford)"],
+        "correctIndex": 1,
+        "explanation": "चार्ल्स स्पीयरमैन ने द्विकारक सिद्धांत दिया, जिसमें 'G' (सामान्य कारक) और 'S' (विशिष्ट कारक) शामिल हैं।"
+    },
+    {
+        "id": 74,
+        "question": "'बुनियादी शिक्षा' (Basic Education/Nai Talim) की अवधारणा किसने प्रतिपादित की?",
+        "options": ["स्वामी विवेकानंद", "रवींद्रनाथ टैगोर", "महात्मा गांधी", "अरविंदो घोष"],
+        "correctIndex": 2,
+        "explanation": "बुनियादी शिक्षा महात्मा गांधी द्वारा प्रतिपादित की गई, जो 'हस्तकला केंद्रित शिक्षा' और मातृभाषा में शिक्षा पर ज़ोर देती है।"
+    },
+    {
+        "id": 75,
+        "question": "शोध में 'सहसंबंध गुणांक' (Correlation Coefficient) का मान -1.00 से +1.00 के बीच क्यों होता है?",
+        "options": ["यह एक प्रायोगिक मान है", "यह चरों के बीच संबंध की शक्ति और दिशा को दर्शाता है", "यह केवल माध्य से संबंधित है", "यह एक यादृच्छिक मान है"],
+        "correctIndex": 1,
+        "explanation": "सहसंबंध गुणांक दो चरों के बीच रैखिक संबंध की शक्ति और दिशा को मापता है, जहां +1.00 एक मजबूत सकारात्मक संबंध और -1.00 एक मजबूत नकारात्मक संबंध दर्शाता है।"
+    },
+    {
+        "id": 76,
+        "question": "समायोजन तंत्र (Defense Mechanism) में 'दमन' (Repression) का क्या अर्थ है?",
+        "options": ["अपनी गलती के लिए दूसरों को दोषी ठहराना", "अस्वीकार्य विचारों, यादों या इच्छाओं को अचेतन (Unconscious) मन में धकेलना", "तर्कसंगत व्याख्या देना", "बच्चों जैसा व्यवहार करना"],
+        "correctIndex": 1,
+        "explanation": "दमन फ्रायडियन मनोविश्लेषण में एक रक्षा तंत्र है, जहां चिंता पैदा करने वाली सामग्री को अचेतन में दबा दिया जाता है।"
+    },
+    {
+        "id": 77,
+        "question": "मानव विकास के संदर्भ में 'आनुवंशिकता' (Heredity) और 'वातावरण' (Environment) के बीच संबंध कैसा है?",
+        "options": ["वे अलग-अलग काम करते हैं", "आनुवंशिकता वातावरण से अधिक महत्वपूर्ण है", "वे गुणात्मक रूप से परस्पर क्रिया करते हैं (Interactional)", "वातावरण आनुवंशिकता को निर्धारित करता है"],
+        "correctIndex": 2,
+        "explanation": "विकास आनुवंशिकता और वातावरण की परस्पर क्रिया (Interactional) का परिणाम है, जिसे $H \times E$ के रूप में दर्शाया जाता है।"
+    },
+    {
+        "id": 78,
+        "question": "स्कूल के 'वार्षिक कैलेंडर' (Annual Calendar) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल छुट्टियों की सूची बनाना", "शैक्षिक और सह-पाठ्यचर्या संबंधी गतिविधियों के लिए समय का प्रभावी ढंग से आवंटन और योजना बनाना", "शिक्षकों को काम देना", "स्कूलों को बंद करना"],
+        "correctIndex": 1,
+        "explanation": "वार्षिक कैलेंडर शैक्षणिक वर्ष के दौरान सभी गतिविधियों की योजना बनाने और समय का प्रभावी ढंग से उपयोग करने में मदद करता है।"
+    },
+    {
+        "id": 79,
+        "question": "शिक्षा में 'सतत और व्यापक मूल्यांकन' (CCE) का उद्देश्य क्या है?",
+        "options": ["केवल परीक्षा को आसान बनाना", "बच्चों के विकास के सभी पहलुओं (शैक्षणिक और सह-शैक्षणिक) का नियमित और समग्र मूल्यांकन करना", "केवल वर्ष के अंत में मूल्यांकन करना", "केवल शिक्षक का मूल्यांकन करना"],
+        "correctIndex": 1,
+        "explanation": "सीसीई बच्चे के विकास के सभी पहलुओं (मानसिक, भावनात्मक, शारीरिक) को स्कूल में और स्कूल के बाहर नियमित रूप से मूल्यांकन करता है।"
+    },
+    {
+        "id": 80,
+        "question": "शोध में 'गैर-प्राचलिक परीक्षण' (Non-Parametric Test) का उपयोग कब किया जाता है?",
+        "options": ["जब जनसंख्या सामान्य रूप से वितरित होती है", "जब नमूना आकार बड़ा होता है", "जब चर नाममात्र (Nominal) या क्रमसूचक (Ordinal) माप स्तर पर होते हैं और सामान्य वितरण की पूर्वधारणा पूरी नहीं होती", "केवल अनुपात डेटा के लिए"],
+        "correctIndex": 2,
+        "explanation": "गैर-प्राचलिक परीक्षणों का उपयोग तब किया जाता है जब जनसंख्या वितरण के बारे में कोई कठोर धारणा नहीं बनाई जा सकती है, जैसे कि नाममात्र या क्रमसूचक डेटा के साथ।"
+    },
+    {
+        "id": 81,
+        "question": "थॉर्नडाइक के अधिगम के मुख्य नियमों में कौन सा शामिल नहीं है?",
+        "options": ["तत्परता का नियम (Law of Readiness)", "अभ्यास का नियम (Law of Exercise)", "प्रभाव का नियम (Law of Effect)", "प्रतिक्रिया का नियम (Law of Response)"],
+        "correctIndex": 3,
+        "explanation": "थॉर्नडाइक के मुख्य नियम: तत्परता, अभ्यास और प्रभाव का नियम हैं। प्रतिक्रिया का नियम एक मुख्य नियम नहीं है।"
+    },
+    {
+        "id": 82,
+        "question": "विद्यालय के 'संसाधन केंद्र' (Resource Centre) का मुख्य कार्य क्या है?",
+        "options": ["केवल प्रधानाचार्य का कार्यालय", "शिक्षकों और छात्रों के लिए शैक्षिक सामग्री, उपकरण और जानकारी प्रदान करना", "केवल पुस्तकालय", "केवल खेल का मैदान"],
+        "correctIndex": 1,
+        "explanation": "संसाधन केंद्र सीखने और सिखाने की प्रक्रिया का समर्थन करने के लिए आवश्यक सामग्री और उपकरण प्रदान करता है।"
+    },
+    {
+        "id": 83,
+        "question": "शिक्षा के किस दर्शन के अनुसार 'शिक्षा को परिवर्तन और अनुकूलन' (Change and Adaptation) की प्रक्रिया होना चाहिए?",
+        "options": ["आदर्शवाद (Idealism)", "यथार्थवाद (Realism)", "व्यवहारवाद/प्रयोजनवाद (Pragmatism)", "वेदांत (Vedanta)"],
+        "correctIndex": 2,
+        "explanation": "प्रयोजनवाद (Pragmatism) परिवर्तन और अनुभवों के माध्यम से अधिगम पर ज़ोर देता है, जिससे अनुकूलन होता है।"
+    },
+    {
+        "id": 84,
+        "question": "भारत में 'राष्ट्रीय पाठ्यचर्या की रूपरेखा' (NCF) कितनी बार प्रकाशित हो चुकी है?",
+        "options": ["दो बार", "तीन बार", "चार बार", "पाँच बार"],
+        "correctIndex": 2,
+        "explanation": "एनसीएफ 1975, 1988, 2000 और 2005 में प्रकाशित हो चुकी है (वर्तमान में एनईपी 2020 के तहत नया NCF विकसित किया जा रहा है)।"
+    },
+    {
+        "id": 85,
+        "question": "शोध में 'चरों पर नियंत्रण' (Control over Variables) किस शोध अभिकल्प की मुख्य विशेषता है?",
+        "options": ["ऐतिहासिक शोध (Historical Research)", "विवरणात्मक शोध (Descriptive Research)", "प्रायोगिक शोध (Experimental Research)", "जातीयता-वर्णन (Ethnography)"],
+        "correctIndex": 2,
+        "explanation": "प्रायोगिक शोध में स्वतंत्र चर में हेरफेर करने के अलावा, बाहरी चरों (Extraneous Variables) को नियंत्रित करना भी अनिवार्य है।"
+    },
+    {
+        "id": 86,
+        "question": "एक छात्र की 'उपलब्धि आयु' (Achievement Age) उसके 'वास्तविक आयु' (Chronological Age) से अधिक है। इसका क्या अर्थ है?",
+        "options": ["छात्र धीमी गति से सीख रहा है", "छात्र सामान्य गति से सीख रहा है", "छात्र अपनी उम्र के औसत से बेहतर प्रदर्शन कर रहा है", "छात्र मानसिक रूप से मंद है"],
+        "correctIndex": 2,
+        "explanation": "जब उपलब्धि आयु वास्तविक आयु से अधिक होती है, तो यह दर्शाता है कि छात्र अपने साथियों के औसत से बेहतर प्रदर्शन कर रहा है (यानी, उसका शैक्षिक भागफल (EQ) 100 से अधिक है)।"
+    },
+    {
+        "id": 87,
+        "question": "भारत में उच्च शिक्षा के क्षेत्र में 'एकैडमिक बैंक ऑफ क्रेडिट' (ABC) का मुख्य कार्य क्या है?",
+        "options": ["केवल ऋण देना", "छात्रों के शैक्षणिक क्रेडिट को डिजिटल रूप से स्टोर और ट्रांसफर करना", "विश्वविद्यालयों को ग्रेड देना", "छात्रों को छात्रवृत्ति प्रदान करना"],
+        "correctIndex": 1,
+        "explanation": "एबीसी (NEP 2020 के तहत) छात्रों के क्रेडिट को स्टोर करने की सुविधा प्रदान करता है, जिससे वे विभिन्न पाठ्यक्रमों और संस्थानों से क्रेडिट को जमा/भुना सकते हैं।"
+    },
+    {
+        "id": 88,
+        "question": "कक्षा शिक्षण में 'सहकर्मी शिक्षण' (Peer Teaching/Learning) का क्या लाभ है?",
+        "options": ["शिक्षक पर काम का बोझ कम करना", "छात्रों के बीच सहयोग, सामाजिक कौशल और सक्रिय भागीदारी को बढ़ावा देना", "केवल तेज़ छात्रों को लाभ पहुंचाना", "कोई लाभ नहीं"],
+        "correctIndex": 1,
+        "explanation": "सहकर्मी शिक्षण छात्रों को एक-दूसरे की मदद करने, सामाजिक कौशल विकसित करने और अधिगम प्रक्रिया में अधिक सक्रिय होने के लिए प्रोत्साहित करता है।"
+    },
+    {
+        "id": 89,
+        "question": "शैक्षिक प्रौद्योगिकी में 'मल्टीमीडिया' (Multimedia) से क्या अभिप्राय है?",
+        "options": ["केवल ऑडियो का उपयोग", "केवल वीडियो का उपयोग", "अधिगम अनुभव को बढ़ाने के लिए टेक्स्ट, ऑडियो, वीडियो, ग्राफिक्स और एनिमेशन का संयोजन", "केवल एक माध्यम का उपयोग"],
+        "correctIndex": 2,
+        "explanation": "मल्टीमीडिया कई अलग-अलग मीडिया प्रारूपों का संयोजन है जिनका उपयोग एक इंटरैक्टिव तरीके से सूचना प्रस्तुत करने के लिए किया जाता है।"
+    },
+    {
+        "id": 90,
+        "question": "स्कूलों में 'प्रभावी नेतृत्व' (Effective Leadership) का सबसे महत्वपूर्ण कार्य क्या है?",
+        "options": ["शिक्षकों पर हावी होना", "नियम और कानून सख्ती से लागू करना", "एक साझा दृष्टिकोण बनाना और शिक्षकों को शैक्षिक लक्ष्यों को प्राप्त करने के लिए प्रेरित करना", "स्कूल की उपेक्षा करना"],
+        "correctIndex": 2,
+        "explanation": "प्रभावी शैक्षिक नेतृत्व में एक साझा लक्ष्य/दृष्टि स्थापित करना और शिक्षकों और कर्मचारियों को उस लक्ष्य की ओर काम करने के लिए प्रेरित करना शामिल है।"
+    },
+    {
+        "id": 91,
+        "question": "जीन पियाजे के संज्ञानात्मक विकास के चरण में 'अहंकारवाद' (Egocentrism) किस चरण की विशेषता है?",
+        "options": ["संवेदी-गामक चरण", "पूर्व-संक्रियात्मक चरण", "मूर्त संक्रियात्मक चरण", "अमूर्त संक्रियात्मक चरण"],
+        "correctIndex": 1,
+        "explanation": "पूर्व-संक्रियात्मक चरण (Pre-operational Stage) (2 से 7 वर्ष) में, बच्चा दुनिया को केवल अपने दृष्टिकोण से देखता है, जिसे अहंकारवाद कहा जाता है।"
+    },
+    {
+        "id": 92,
+        "question": "भारत में शिक्षक शिक्षा को नियंत्रित करने वाला वैधानिक निकाय कौन सा है?",
+        "options": ["यूजीसी (UGC)", "एआईसीटीई (AICTE)", "एनसीटीई (NCTE)", "एनसीईआरटी (NCERT)"],
+        "correctIndex": 2,
+        "explanation": "एनसीटीई (National Council for Teacher Education) भारत में शिक्षक शिक्षा की योजना, समन्वय और मानकों के रखरखाव के लिए वैधानिक निकाय है।"
+    },
+    {
+        "id": 93,
+        "question": "शोध में 'स्वतंत्र चर' (Independent Variable) में हेरफेर करने का प्राथमिक उद्देश्य क्या है?",
+        "options": ["समय बचाना", "परिणामों की विश्वसनीयता बढ़ाना", "आश्रित चर (Dependent Variable) पर इसके प्रभाव का अवलोकन करना", "सांख्यिकीय विश्लेषण से बचना"],
+        "correctIndex": 2,
+        "explanation": "प्रायोगिक शोध में स्वतंत्र चर (कारण) में बदलाव करके आश्रित चर (प्रभाव) पर इसके परिणाम को देखा जाता है।"
+    },
+    {
+        "id": 94,
+        "question": "'शैक्षिक मनोविज्ञान' (Educational Psychology) का मुख्य उद्देश्य क्या है?",
+        "options": ["केवल जानवरों का अध्ययन करना", "मानव व्यवहार का अध्ययन करना", "सीखने और सिखाने की प्रक्रिया को समझना और उसमें सुधार करना", "केवल दर्शनशास्त्र पढ़ाना"],
+        "correctIndex": 2,
+        "explanation": "शैक्षिक मनोविज्ञान अधिगम और शिक्षण से संबंधित मानव व्यवहार का वैज्ञानिक अध्ययन है, जिसका उद्देश्य शैक्षिक परिणामों में सुधार करना है।"
+    },
+    {
+        "id": 95,
+        "question": "मानदंड-संदर्भित परीक्षण (Criterion-Referenced Test) का मुख्य उद्देश्य क्या है?",
+        "options": ["परीक्षार्थियों की एक-दूसरे से तुलना करना", "निर्दिष्ट मानकों (Specific Standards) के मुकाबले छात्र के प्रदर्शन को मापना", "केवल उच्च अंकों वाले छात्रों को चुनना", "सामान्य वितरण वक्र बनाना"],
+        "correctIndex": 1,
+        "explanation": "मानदंड-संदर्भित परीक्षण छात्र की योग्यता को पूर्व निर्धारित मानकों या दक्षताओं के एक सेट के मुकाबले मापता है।"
+    },
+    {
+        "id": 96,
+        "question": "शैक्षिक वित्त पोषण में 'इक्विटी' (Equity) का क्या अर्थ है?",
+        "options": ["सभी स्कूलों को समान पैसा देना", "सभी स्कूलों को पर्याप्त पैसा देना", "उन स्कूलों को अधिक पैसा देना जिन्हें अधिक आवश्यकता है (जरूरतों के आधार पर)", "केवल निजी स्कूलों को पैसा देना"],
+        "correctIndex": 2,
+        "explanation": "इक्विटी का अर्थ है 'निष्पक्षता', यानी संसाधनों को जरूरतों के अनुसार वितरित करना ताकि सभी को सफल होने का समान अवसर मिल सके, भले ही इसके लिए असमान (लेकिन न्यायोचित) आवंटन की आवश्यकता हो।"
+    },
+    {
+        "id": 97,
+        "question": "शिक्षा में 'मानवतावादी दृष्टिकोण' (Humanistic Approach) किस पर ज़ोर देता है?",
+        "options": ["सज़ा और पुरस्कार", "करके सीखना", "आत्म-बोध (Self-Actualization), व्यक्तिगत विकास और छात्र की स्वतंत्रता", "अनुकूलन और आदतें"],
+        "correctIndex": 2,
+        "explanation": "कार्ल रोजर्स और मैस्लो से प्रेरित मानवतावाद आत्म-बोध, व्यक्तिगत क्षमता, स्वतंत्रता और गरिमा पर केंद्रित है।"
+    },
+    {
+        "id": 98,
+        "question": "शोध की 'केस स्टडी विधि' (Case Study Method) का उपयोग कब किया जाता है?",
+        "options": ["केवल एक बड़े नमूने के लिए", "केवल मात्रात्मक डेटा एकत्र करने के लिए", "एक व्यक्ति, समूह, या घटना का 'गहन, विस्तृत' अध्ययन करने के लिए", "चरों के बीच कारण और प्रभाव संबंध स्थापित करने के लिए"],
+        "correctIndex": 2,
+        "explanation": "केस स्टडी एक गुणात्मक शोध विधि है जिसका उद्देश्य एक विशिष्ट इकाई (केस) का गहन और व्यापक विश्लेषण करना है।"
+    },
+    {
+        "id": 99,
+        "question": "शिक्षा में 'जीरो रिजेक्शन पॉलिसी' (Zero Rejection Policy) किससे संबंधित है?",
+        "options": ["छात्रों को परीक्षा में फेल न करना", "सभी छात्रों को स्कूल में प्रवेश देना, उनकी क्षमता या अक्षमता की परवाह किए बिना", "शिक्षकों को बर्खास्त न करना", "स्कूलों को बंद न करना"],
+        "correctIndex": 1,
+        "explanation": "जीरो रिजेक्शन पॉलिसी समावेशी शिक्षा की एक नींव है, जिसका अर्थ है कि किसी भी बच्चे को उसकी अक्षमता या अन्य कारकों के कारण शिक्षा से वंचित नहीं किया जाएगा।"
+    },
+    {
+        "id": 100,
+        "question": "'सामाजिक अधिगम सिद्धांत' (Social Learning Theory) का प्रतिपादन किसने किया?",
+        "options": ["सिगमंड फ्रायड (Sigmund Freud)", "बी.एफ. स्किनर (B.F. Skinner)", "अल्बर्ट बंदूरा (Albert Bandura)", "जीन पियाजे (Jean Piaget)"],
+        "correctIndex": 2,
+        "explanation": "अल्बर्ट बंदूरा ने सामाजिक अधिगम सिद्धांत दिया, जो अवलोकन (Observation) और अनुकरण (Imitation) के माध्यम से सीखने पर ज़ोर देता है।"
     }
-  ];
+];
 
   // ---------------------- STATE ----------------------
-  let data = JSON.parse(JSON.stringify(quizData)); // working copy
+  let quizData = []; // working copy of quiz questions
   let current = 0;
-  let answers = Array(data.length).fill(null); // store chosen option index
-  let flagged = Array(data.length).fill(false);
+  let answers = []; // store chosen option index
+  let flagged = [];
   let skipped = new Set();
-  let durationSec = 10 * 60; // default 10 minutes
+  let durationSec = 0;
   let timerInterval = null;
+  let enableTimer = true;
+  let timerType = 'whole'; // 'whole' or 'perQuestion'
+  let enableSkip = false; // New state variable for skip functionality
+  let skipLimit = 0; // 0 for unlimited skips
+  let currentSkips = 0;
+  let numQuestions = 0; // New state variable for number of questions
 
   // Utility: shuffle array (Fisher-Yates)
   function shuffle(array){
@@ -231,9 +929,9 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }
 
-  function prepareQuestionData(){
+  function prepareQuestionData(dataToPrepare){
     // shuffle options for each question but keep track of correctIndex mapping
-    data.forEach(q=>{
+    dataToPrepare.forEach(q=>{
       const opt = q.options.map((o,i)=>({o,orig:i}));
       shuffle(opt);
       q.options = opt.map(x=>x.o);
@@ -241,6 +939,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const newIndex = opt.findIndex(x=>x.orig===q.correctIndex);
       q.correctIndex = newIndex;
     });
+    return dataToPrepare;
   }
 
   // helper to safely show bootstrap modal (fallback to simple class toggle if bootstrap missing)
@@ -263,11 +962,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // render question
   function render(){
-    const q = data[current];
+    const q = quizData[current];
     const container = document.getElementById('questionArea');
     container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current+1}.</strong> ${q.question}</div>\n        <div><span class=\"badge bg-${flagged[current]? 'warning' : 'secondary'}\">${flagged[current]? 'Flagged' : 'Not flagged'}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt,idx)=>`\n        <label class=\"option-label border p-2 mb-2 ${answers[current]===idx? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current]===idx? 'checked' : ''} style=\"margin-right:8px\"> ${opt}\n        </label>\n      `).join('')}</div>\n      <div class=\"mt-2 small text-muted\">${q.options.length} options</div>\n    `;
 
-    document.getElementById('qIndex').innerText = `Question ${current+1} of ${data.length}`;
+    document.getElementById('qIndex').innerText = `Question ${current+1} of ${quizData.length}`;
     updateCounts();
 
     // wire option clicks
@@ -278,8 +977,12 @@ document.addEventListener('DOMContentLoaded', function(){
         if(skipped.has(current)) skipped.delete(current);
         updateCounts();
         // Automatically move to the next question if not the last one
-        if (current < data.length - 1) {
+        if (current < quizData.length - 1) {
           current++;
+          if (timerType === 'perQuestion') {
+            stopTimer();
+            startTimer();
+          }
           render();
         }
       });
@@ -289,9 +992,17 @@ document.addEventListener('DOMContentLoaded', function(){
     const card = container.closest('.card');
     if(flagged[current]) card.classList.add('flagged'); else card.classList.remove('flagged');
 
-    // enable/disable prev/next
+    // enable/disable prev/next and skip
     document.getElementById('prevBtn').disabled = current===0;
-    document.getElementById('nextBtn').disabled = current===data.length-1;
+    document.getElementById('nextBtn').disabled = current===quizData.length-1;
+
+    const skipBtn = document.getElementById('skipBtn');
+    if (!enableSkip) {
+      skipBtn.style.display = 'none';
+    } else {
+      skipBtn.style.display = 'inline-block'; // or whatever its default display is
+      skipBtn.disabled = (skipLimit !== 0 && currentSkips >= skipLimit);
+    }
   }
 
   function updateCounts(){
@@ -305,14 +1016,19 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // navigation
   document.getElementById('prevBtn').addEventListener('click', ()=>{ current = Math.max(0,current-1); render(); });
-  document.getElementById('nextBtn').addEventListener('click', ()=>{ current = Math.min(data.length-1,current+1); render(); });
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ current = Math.min(quizData.length-1,current+1); render(); });
 
   // skip
   document.getElementById('skipBtn').addEventListener('click', ()=>{
-    skipped.add(current);
-    // move next if possible
-    if(current < data.length-1) current++;
-    render();
+    if (skipLimit === 0 || currentSkips < skipLimit) {
+      skipped.add(current);
+      currentSkips++;
+      // move next if possible
+      if(current < quizData.length-1) current++;
+      render();
+    } else {
+      alert('Skip limit reached!');
+    }
   });
 
   // flag
@@ -325,23 +1041,25 @@ document.addEventListener('DOMContentLoaded', function(){
   let reviewModal = null;
   let scoreModal = null;
   let retakeConfirmModal = null;
+  let customSettingsModal = null; // Initialize custom settings modal
   try{
     if(typeof bootstrap !== 'undefined'){
       reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
       scoreModal = new bootstrap.Modal(document.getElementById('scoreModal'));
       retakeConfirmModal = new bootstrap.Modal(document.getElementById('retakeConfirmModal'));
+      customSettingsModal = new bootstrap.Modal(document.getElementById('customSettingsModal')); // New modal
     }
   }catch(err){ console.warn('Unable to initialize bootstrap modals:', err); }
 
   function populateReviewLists(){
     const skippedList = document.getElementById('skippedList'); skippedList.innerHTML='';
     skipped.forEach(i=>{
-      const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${data[i].question.slice(0,80)}`;
+      const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${quizData[i].question.slice(0,80)}`;
       li.addEventListener('click', ()=>{ safeHideModal(reviewModal,'reviewModal'); current=i; render(); });
       skippedList.appendChild(li);
     });
     const flaggedList = document.getElementById('flaggedList'); flaggedList.innerHTML='';
-    flagged.forEach((f,i)=>{ if(f){ const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${data[i].question.slice(0,80)}`; li.addEventListener('click', ()=>{ safeHideModal(reviewModal,'reviewModal'); current=i; render(); }); flaggedList.appendChild(li); }});
+    flagged.forEach((f,i)=>{ if(f){ const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${quizData[i].question.slice(0,80)}`; li.addEventListener('click', ()=>{ safeHideModal(reviewModal,'reviewModal'); current=i; render(); }); flaggedList.appendChild(li); }});
   }
 
   document.getElementById('reviewBtn').addEventListener('click', ()=>{ populateReviewLists(); safeShowModal(reviewModal,'reviewModal'); });
@@ -353,7 +1071,14 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // timer
   function startTimer(){
+    if (!enableTimer) {
+      document.getElementById('timer').innerText = '--:--';
+      return;
+    }
     let remaining = durationSec;
+    if (timerType === 'perQuestion') {
+      remaining = parseInt(document.getElementById('timerDuration').value) * 60; // Reset for each question
+    }
     updateTimerDisplay(remaining);
     timerInterval = setInterval(()=>{
       remaining--;
@@ -363,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   function stopTimer(){ if(timerInterval) clearInterval(timerInterval); }
   function updateTimerDisplay(sec){
+    if (!enableTimer) return;
     const m = Math.floor(sec/60).toString().padStart(2,'0');
     const s = (sec%60).toString().padStart(2,'0');
     document.getElementById('timer').innerText = `${m}:${s}`;
@@ -372,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', function(){
   function showScore(){
     // compute
     let correct=0;
-    const details = data.map((q,i)=>{
+    const details = quizData.map((q,i)=>{
       const user = answers[i];
       const isCorrect = user===q.correctIndex;
       if(isCorrect) correct++;
@@ -380,7 +1106,13 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     const scoreSummary = document.getElementById('scoreSummary');
-    scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${data.length}</h4><div class='small text-muted'>Answered: ${answers.filter(a=>a!==null).length}</div>`;
+    scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${quizData.length}</h4><div class='small text-muted'>Answered: ${answers.filter(a=>a!==null).length}</div>`;
+    if (enableTimer) {
+      scoreSummary.innerHTML += `<div class='small text-muted'>Time taken: ${formatTime(durationSec - (parseInt(document.getElementById('timer').innerText.split(':')[0])*60 + parseInt(document.getElementById('timer').innerText.split(':')[1])))}</div>`;
+    } else {
+      scoreSummary.innerHTML += `<div class='small text-muted'>Timer: Disabled</div>`;
+    }
+
 
     const detailed = document.getElementById('detailedReport'); detailed.innerHTML='';
     details.forEach(d=>{
@@ -404,26 +1136,92 @@ document.addEventListener('DOMContentLoaded', function(){
     safeShowModal(scoreModal,'scoreModal');
   }
 
-  // retake/shuffle
-  function retake(){
-    // reset answers/flags/skips
-    answers = Array(data.length).fill(null);
-    flagged = Array(data.length).fill(false);
-    skipped = new Set();
-    // restore fresh data from original quizData then shuffle questions and options
-    data = JSON.parse(JSON.stringify(quizData));
-    shuffle(data);
-    prepareQuestionData();
-    current = 0; render(); startTimer();
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   }
 
+  // retake/shuffle
+  function retake(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting){
+    // reset answers/flags/skips
+    answers = Array(quizData.length).fill(null);
+    flagged = Array(quizData.length).fill(false);
+    skipped = new Set();
+    currentSkips = 0;
+    
+    enableTimer = enableTimerSetting;
+    durationSec = durationSetting;
+    skipLimit = skipLimitSetting;
+    timerType = timerTypeSetting;
+    enableSkip = enableSkipSetting; // Set the new enableSkip variable
+    numQuestions = numQuestionsSetting; // Set the number of questions
+
+    // restore fresh data from original quizData then shuffle questions and options
+    quizData = JSON.parse(JSON.stringify(quizDataOriginal));
+    shuffle(quizData);
+    quizData = quizData.slice(0, numQuestions); // Limit the number of questions
+    quizData = prepareQuestionData(quizData);
+    current = 0; 
+    render(); 
+    stopTimer(); // Stop any existing timer
+    startTimer();
+  }
+
+  // New function to start the quiz
+  function startQuiz(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting) {
+    document.getElementById('quickTestBtn').style.display = 'none';
+    document.getElementById('customTestBtn').style.display = 'none';
+    document.getElementById('retakeFromScore').style.display = 'block'; // Show retake button
+    document.getElementById('questionArea').closest('.card').style.display = 'block'; // Show quiz area
+    document.getElementById('statusBar').style.display = 'block'; // Show status bar
+
+    retake(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting);
+  }
+
+  // Event Listeners for new buttons
+  document.getElementById('quickTestBtn').addEventListener('click', ()=>{
+    // Default settings for quick test: timer enabled (10 min), unlimited skips, whole test timer, skip disabled, 10 questions
+    startQuiz(true, 10 * 60, 0, 'whole', false, 10);
+  });
+
+  document.getElementById('customTestBtn').addEventListener('click', ()=>{
+    // Set max questions for custom test
+    document.getElementById('numQuestions').max = quizDataOriginal.length;
+    safeShowModal(customSettingsModal, 'customSettingsModal');
+  });
+
+  document.getElementById('startCustomTestBtn').addEventListener('click', ()=>{
+    const enableTimerSetting = document.getElementById('enableTimer').checked;
+    const durationSetting = parseInt(document.getElementById('timerDuration').value) * 60;
+    const enableSkipSetting = document.getElementById('enableSkip').checked;
+    const skipLimitSetting = enableSkipSetting ? parseInt(document.getElementById('skipCount').value) : 0;
+    const timerTypeSetting = document.querySelector('input[name="timerType"]:checked').value;
+    const numQuestionsSetting = parseInt(document.getElementById('numQuestions').value);
+
+    safeHideModal(customSettingsModal, 'customSettingsModal');
+    startQuiz(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting);
+  });
+
+  // Toggle timer settings visibility
+  document.getElementById('enableTimer').addEventListener('change', (e) => {
+    document.getElementById('timerSettings').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  // Toggle skip settings visibility
+  document.getElementById('enableSkip').addEventListener('change', (e) => {
+    document.getElementById('skipSettings').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  // Retake from score modal
   document.getElementById('retakeFromScore').addEventListener('click', ()=>{
     safeShowModal(retakeConfirmModal, 'retakeConfirmModal');
   });
 
   document.getElementById('confirmRetakeBtn').addEventListener('click', ()=>{
     safeHideModal(retakeConfirmModal, 'retakeConfirmModal');
-    retake();
+    // Use current settings for retake
+    retake(enableTimer, durationSec, skipLimit, timerType, enableSkip, numQuestions);
   });
 
   document.getElementById('retakeFromScoreModal').addEventListener('click', ()=>{
@@ -433,9 +1231,10 @@ document.addEventListener('DOMContentLoaded', function(){
 
   document.getElementById('closeScore').addEventListener('click', ()=>{ /* no-op */ });
 
-  // initialize
-  prepareQuestionData(); render(); startTimer();
-
+  // Initial state: hide quiz area and status bar, show start buttons
+  document.getElementById('questionArea').closest('.card').style.display = 'none';
+  document.getElementById('statusBar').style.display = 'none';
+  document.getElementById('retakeFromScore').style.display = 'none'; // Hide retake button initially
 });
 </script>
 </body>
