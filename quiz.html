@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UGC NET Education - Quiz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      padding: 20px;
+      background: #f8f9fa
+    }
+
+    .option-label {
+      display: block;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px
+    }
+
+    .option-label:hover {
+      background: #f1f1f1
+    }
+
+    .flagged {
+      background: #fff3cd
+    }
+
+    .skipped-badge {
+      font-size: 0.75rem
+    }
+
+    .timer {
+      font-family: monospace
+    }
+
+    .explain {
+      font-size: 0.95rem
+    }
+
+    .correct {
+      color: green
+    }
+
+    .wrong {
+      color: red
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="row mb-3">
+      <div class="col-md-8">
+        <h3>UGC NET (Paper-II) — Education: Practice Quiz</h3>
+        <!-- <div class="small text-muted">10 questions with explanations — features: prev/next/skip/flag, review before final submit, timer, scorecard and retake with shuffling.</div> -->
+      </div>
+
+      <div class="col-md-4 text-end" id="quizHeaderContainer" style="display: none;">
+        <div class="d-flex justify-content-between" id="quizHeader">
+          <div>Time left: <span id="timer" class="timer fs-5">--:-</span></div>
+        </div>
+        <div id="refreshButtonContainer" class="mt-2">
+          <button id="refreshBtn" class="btn btn-info btn-sm">Refresh</button>
+          <button id="retakeFromScore" type="button" class="btn btn-outline-primary" style="display:none;">Retake
+            (shuffle)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- <div class="row" id="quizHeaderContainer">
+    <div class="col" id="quizHeader">
+      <div>Time left: <span id="timer" class="timer fs-5">--:-</span></div>
+    </div>
+    <div class="col">
+      <div class="row" id="refreshButtonContainer">
+        <div class="col"><button id="retakeFromScore" type="button" class="btn btn-outline-primary" style="display:none;">Retake (shuffle)</button></div>
+        <div class="col"> <button id="refreshBtn" class="btn btn-info btn-sm">Refresh</button></div>
+      </div>
+    </div>
+  </div> -->
+
+    <div class="row mb-3">
+      <div class="col-md-12 text-center">
+        <button id="quickTestBtn" type="button" class="btn btn-primary me-2">Quick Test</button>
+        <button id="customTestBtn" type="button" class="btn btn-info">Custom Test</button>
+      </div>
+    </div>
+
+    <div class="card" style="display:none;">
+      <div class="card-body">
+        <div id="questionArea">
+          <!-- question content injected here -->
+        </div>
+
+        <div class="d-flex justify-content-between mt-3">
+          <div>
+            <button id="prevBtn" class="btn btn-secondary btn-sm">Prev</button>
+            <button id="nextBtn" class="btn btn-secondary btn-sm">Next</button>
+          </div>
+          <div>
+            <button id="skipBtn" class="btn btn-outline-warning btn-sm">Skip</button>
+            <button id="flagBtn" class="btn btn-outline-info btn-sm">Flag</button>
+            <button id="reviewBtn" class="btn btn-success btn-sm">Review & Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3" id="statusBar" style="display:none;">
+      <span id="qIndex"></span>
+      <span class="ms-3">Answered: <span id="answeredCount">0</span></span>
+      <span class="ms-3">Flagged: <span id="flaggedCount">0</span></span>
+      <span class="ms-3">Skipped: <span id="skippedCount">0</span></span>
+    </div>
+
+    <!-- Retake Confirmation Modal -->
+    <div class="modal fade" id="retakeConfirmModal" tabindex="-1" aria-labelledby="retakeConfirmModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="retakeConfirmModalLabel">Confirm Retake</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to retake the quiz and shuffle questions? Your current progress will be lost.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirmRetakeBtn">Retake</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Refresh Confirmation Modal -->
+    <div class="modal fade" id="refreshConfirmModal" tabindex="-1" aria-labelledby="refreshConfirmModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="refreshConfirmModalLabel">Confirm Refresh</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to refresh the page? Your current progress will be lost.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirmRefreshBtn">Refresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Review Modal -->
+    <div class="modal fade p-4" id="reviewModal" tabindex="-1">
+      <div class="modal-dialog modal-xl "></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Review before final submit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="small text-muted px-3 mt-2">You can click an item to jump to the question and change your answer.
+        </div>
+        <hr>
+        <div class="modal-body">
+          <div id="reviewLists">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Unanswered / Skipped</h6>
+                <ul id="skippedList" class="list-group"></ul>
+                <h6 class="mt-3">Flagged</h6>
+                <ul id="flaggedList" class="list-group"></ul>
+              </div>
+              <div class="col-md-6">
+                <h6>Unanswered <span class="text-danger">*</span></h6>
+                <ul id="unansweredList" class="list-group"></ul>
+              </div>
+
+            </div>
+
+            <div class="row">
+              <div class="col-md-12" id="answeredQuestionsSection" style="display: none;">
+                <h6>Answered Questions</h6>
+                <ul id="answeredList" class="list-group"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" value="" id="declarationCheckbox">
+            <label class="form-check-label" for="declarationCheckbox">
+              मैं घोषणा करता हूँ कि मैंने सभी प्रश्नों की समीक्षा कर ली है और मैं अंतिम सबमिशन के लिए तैयार हूँ।
+            </label>
+          </div>
+
+
+        </div>
+        <div class="modal-footer">
+          <button id="cancelSubmit" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="confirmSubmit" type="button" class="btn btn-primary">Submit Final Answers</button>
+        </div>
+        <div id="submissionWarning" style="display: none;">
+          <div class="alert alert-danger m-2" role="alert">
+            कृपया अंतिम सबमिट करने से पहले सभी गैर-छोड़े गए प्रश्नों का उत्तर दें और घोषणा चेकबॉक्स पर टिक करें।
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score Modal -->
+  <div class="modal fade" id="scoreModal" tabindex="-1">
+    <div class="modal-dialog modal-sm-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Scorecard</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="scoreSummary"></div>
+          <hr>
+          <div id="detailedReport"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="closeScore" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button id="retakeFromScoreModal" type="button" class="btn btn-outline-primary">Retake (shuffle)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Settings Modal -->
+  <div class="modal fade" id="customSettingsModal" tabindex="-1" aria-labelledby="customSettingsModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customSettingsModalLabel">Custom Test Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="customSettingsForm">
+            <div class="mb-3 form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="enableTimer" checked>
+              <label class="form-check-label" for="enableTimer">Enable Timer</label>
+            </div>
+            <div class="mb-3" id="timerSettings">
+              <label for="timerDuration" class="">Timer Duration (minutes):</label>
+              <div class="form-text mb-2">Set the total duration for the quiz.</div>
+              <div class="input-group mb-3">
+                <button class="btn btn-outline-secondary" type="button" id="decreaseTimerDuration">-</button>
+                <input type="number" class="form-control" id="timerDuration" value="10" min="1">
+                <button class="btn btn-outline-secondary" type="button" id="increaseTimerDuration">+</button>
+              </div>
+              
+              <div class="mt-2">
+                <label class="form-label">Timer Type:</label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="timerType" id="timerTypeWhole" value="whole"
+                    checked>
+                  <label class="form-check-label" for="timerTypeWhole">Whole Test</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="timerType" id="timerTypePerQuestion"
+                    value="perQuestion">
+                  <label class="form-check-label" for="timerTypePerQuestion">Per Question</label>
+                </div>
+              </div>
+            </div>
+            <script>
+              document.addEventListener('DOMContentLoaded', function () {
+                const timerDurationLabel = document.querySelector('label[for="timerDuration"]');
+                const timerDurationInput = document.getElementById('timerDuration');
+                const timerTypeText = document.querySelector('.form-text');
+                const timerTypeWhole = document.getElementById('timerTypeWhole');
+                const timerTypePerQuestion = document.getElementById('timerTypePerQuestion');
+
+                function updateTimerSettings() {
+                  if (timerTypePerQuestion.checked) {
+                    timerDurationLabel.textContent = 'Timer Duration (seconds):';
+                    timerTypeText.textContent = 'Set the duration per question in seconds.';
+                    timerDurationInput.value = '60'; // Default to 60 seconds for per question
+                  } else {
+                    timerDurationLabel.textContent = 'Timer Duration (minutes):';
+                    timerTypeText.textContent = 'Set the total duration for the quiz in minutes.';
+                    timerDurationInput.value = '10'; // Default to 10 minutes for whole test
+                  }
+                }
+
+                timerTypeWhole.addEventListener('change', updateTimerSettings);
+                timerTypePerQuestion.addEventListener('change', updateTimerSettings);
+
+                // Initial call to set the correct state based on default selection
+                updateTimerSettings();
+              });
+            </script>
+            <div class="mb-3">
+              <label for="numQuestions" class="form-label">Number of Questions:</label>
+              <div class="input-group mb-3">
+                <button class="btn btn-outline-secondary" type="button" id="decreaseNumQuestions">-</button>
+                <input type="number" class="form-control" id="numQuestions" value="10" min="10">
+                <button class="btn btn-outline-secondary" type="button" id="increaseNumQuestions">+</button>
+              </div>
+            </div>
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="enableSkip" checked>
+                <label class="form-check-label" for="enableSkip">Allow Skipping Questions</label>
+              </div>
+            </div>
+              <div class="mb-3" id="skipSettings">
+                <label for="skipCount" class="form-label">Number of Skips allowed:</label>
+                <div class="input-group mb-3">
+                  <button class="btn btn-outline-secondary" type="button" id="decreaseSkipCount">-</button>
+                  <input type="number" class="form-control" id="skipCount" value="1" min="1" max="10">
+                  <button class="btn btn-outline-secondary" type="button" id="increaseSkipCount">+</button>
+                </div>
+                <!-- <div class="form-text">Set 0 for unlimited skips.</div> -->
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="startCustomTestBtn">Start Custom Test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- IMPORTANT: load Bootstrap JS first so `bootstrap` is available to our script -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Application script: wrapped in DOMContentLoaded for safety -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap JS is not loaded. The app requires Bootstrap JavaScript (bootstrap.bundle.min.js) for modals and other components.');
+        // still proceed, but modal.show() calls will be guarded
+      }
+
+      // ---------------------- QUIZ DATA (JSON) ----------------------
+      const quizDataOriginal = [
+        { "id": 1, "question": "Which learning theory emphasizes the role of external reinforcement in shaping behaviour?", "options": ["Constructivism", "Behaviorism", "Humanistic Theory", "Cognitive Development Theory"], "correctIndex": 1, "explanation": "Behaviorism (Skinner, Pavlov) emphasizes observable behaviour and the role of external reinforcement and punishment in shaping behaviour." },
+        { "id": 2, "question": "Who proposed the stages of cognitive development (sensorimotor, preoperational, concrete operational, formal operational)?", "options": ["Vygotsky", "Piaget", "Bruner", "Kohlberg"], "correctIndex": 1, "explanation": "Jean Piaget proposed the four-stage theory of cognitive development describing how children's thinking evolves qualitatively with age." },
+        { "id": 3, "question": "Zone of Proximal Development (ZPD) is a key concept in which theory?", "options": ["Behaviorism", "Constructivism", "Sociocultural Theory", "Multiple Intelligences"], "correctIndex": 2, "explanation": "Lev Vygotsky's Sociocultural Theory introduced ZPD — the gap between what a learner can do independently and with guidance." },
+        { "id": 4, "question": "Which assessment is primarily formative in nature?", "options": ["Terminal examination", "Monthly board exam", "Diagnostic test after instruction", "Weekly classroom quiz with feedback"], "correctIndex": 3, "explanation": "Weekly classroom quizzes with timely feedback are formative assessments aimed at monitoring learning and informing instruction." },
+        { "id": 5, "question": "Bloom's taxonomy originally categorized cognitive objectives into how many levels?", "options": ["3", "4", "6", "7"], "correctIndex": 2, "explanation": "Bloom's original taxonomy (1956) described six cognitive levels: Knowledge, Comprehension, Application, Analysis, Synthesis, Evaluation." },
+        { "id": 6, "question": "Which method is best suited to study a single case in depth?", "options": ["Survey method", "Experimental method", "Case study method", "Correlation method"], "correctIndex": 2, "explanation": "Case study method involves an in-depth, contextualized investigation of a single individual, group, or institution." },
+        { "id": 7, "question": "Reliability of a test refers to: ", "options": ["Accuracy of measurement", "Consistency of measurement", "Relevance to curriculum", "Difficulty level"], "correctIndex": 1, "explanation": "Reliability indicates consistency or stability of test scores over time, across forms, or across items." },
+        { "id": 8, "question": "Which pedagogy strongly advocates learner-centred, inquiry-based learning and discovery?", "options": ["Lecture method", "Project-based/constructivist pedagogy", "Rote learning", "Direct instruction only"], "correctIndex": 1, "explanation": "Constructivist and project-based pedagogies promote learner-centred inquiry, active exploration and building understanding." },
+        { "id": 9, "question": "What is 'authentic assessment'?", "options": ["Multiple choice tests only", "Assessment of real-world tasks and performances", "Grading based on attendance", "Standardized testing only"], "correctIndex": 1, "explanation": "Authentic assessment measures learners' ability to apply knowledge to real-world tasks, performances, or projects." },
+        { "id": 10, "question": "Which Indian education commission emphasized 'learning without burden' and recommended changes in the curriculum?", "options": ["Kothari Commission", "National Policy on Education 1986", "Mudaliar Commission", "Yashpal Committee"], "correctIndex": 1, "explanation": "The National Policy on Education (1986) and subsequent efforts emphasized reducing burden and stress on students and curricular reforms." },
+        { "id": 11, "question": "Which Indian education commission emphasized 'learning without burden' and recommended changes in the curriculum?", "options": ["Kothari Commission", "National Policy on Education 1986", "Mudaliar Commission", "Yashpal Committee"], "correctIndex": 1, "explanation": "The National Policy on Education (1986) and subsequent efforts emphasized reducing burden and stress on students and curricular reforms." }
+      ];
+
+      const quizDataSubject1 = [
+        { "id": 1, "question": "Subject 1: Question 1", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 0, "explanation": "Explanation for Subject 1, Question 1" },
+        { "id": 2, "question": "Subject 1: Question 2", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 1, "explanation": "Explanation for Subject 1, Question 2" },
+        { "id": 3, "question": "Subject 1: Question 3", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 2, "explanation": "Explanation for Subject 1, Question 3" }
+      ];
+
+      const quizDataSubject2 = [
+        { "id": 1, "question": "Subject 2: Question 1", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 3, "explanation": "Explanation for Subject 2, Question 1" },
+        { "id": 2, "question": "Subject 2: Question 2", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 2, "explanation": "Explanation for Subject 2, Question 2" },
+        { "id": 3, "question": "Subject 2: Question 3", "options": ["Option A", "Option B", "Option C", "Option D"], "correctIndex": 1, "explanation": "Explanation for Subject 2, Question 3" }
+      ];
+
+      // ---------------------- STATE ----------------------
+      let quizData = []; // working copy of quiz questions
+
+      // Get subject from URL query parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const subject = urlParams.get('subject');
+
+      switch (subject) {
+        case 'subject1':
+          quizData = quizDataSubject1;
+          break;
+        case 'subject2':
+          quizData = quizDataSubject2;
+          break;
+        case 'original':
+        default:
+          quizData = quizDataOriginal;
+          break;
+      }
+
+      let current = 0;
+      let answers = Array(quizData.length).fill(null); // store chosen option index
+      let flagged = Array(quizData.length).fill(false);
+      let skipped = new Set();
+      let durationSec = 0;
+      let timerInterval = null;
+      let enableTimer = true;
+      let timerType = 'whole'; // 'whole' or 'perQuestion'
+      let enableSkip = false; // New state variable for skip functionality
+      let skipLimit = 0; // 0 for unlimited skips
+      // let currentSkips = 0; // Removed this line
+      let numQuestions = 0; // New state variable for number of questions
+
+      // Utility: shuffle array (Fisher-Yates)
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function prepareQuestionData(dataToPrepare) {
+        // shuffle options for each question but keep track of correctIndex mapping
+        dataToPrepare.forEach(q => {
+          const opt = q.options.map((o, i) => ({ o, orig: i }));
+          shuffle(opt);
+          q.options = opt.map(x => x.o);
+          // find new index of original correct
+          const newIndex = opt.findIndex(x => x.orig === q.correctIndex);
+          q.correctIndex = newIndex;
+        });
+        return dataToPrepare;
+      }
+
+      // helper to safely show bootstrap modal (fallback to simple class toggle if bootstrap missing)
+      function safeShowModal(modalInstance, modalId) {
+        if (modalInstance && typeof modalInstance.show === 'function') {
+          modalInstance.show();
+        } else {
+          const el = document.getElementById(modalId);
+          if (el) { el.classList.add('show', 'd-block'); el.style.backgroundColor = 'rgba(0,0,0,0.4)'; }
+        }
+      }
+      function safeHideModal(modalInstance, modalId) {
+        if (modalInstance && typeof modalInstance.hide === 'function') {
+          modalInstance.hide();
+        } else {
+          const el = document.getElementById(modalId);
+          if (el) { el.classList.remove('show', 'd-block'); el.style.backgroundColor = ''; }
+        }
+      }
+
+      // render question
+      function render() {
+        const q = quizData[current];
+        const container = document.getElementById('questionArea');
+        container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current + 1}.</strong> ${q.question}</div>\n        <div><span class=\"badge bg-${flagged[current] ? 'warning' : (skipped.has(current) ? 'info' : 'secondary')}\">${flagged[current] ? 'Flagged' : (skipped.has(current) ? 'Skipped' : 'Not flagged')}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt, idx) => `\n        <label class=\"option-label border p-2 mb-2 ${answers[current] === idx ? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current] === idx ? 'checked' : ''} style=\"margin-right:8px\"> ${opt}\n        </label>\n      `).join('')}</div>\n      ${skipped.has(current) ? '<div class=\"small text-muted mt-2\">Select option to remove from skip</div>' : ''}\n      <div class=\"mt-2 small text-muted\">${q.options.length} options</div>\n    `;
+
+        document.getElementById('qIndex').innerText = `Question ${current + 1} of ${quizData.length}`;
+        updateCounts();
+
+        // wire option clicks
+        document.querySelectorAll('input[name="opt"]').forEach(inp => {
+          inp.addEventListener('change', (e) => {
+            answers[current] = parseInt(e.target.value);
+            // if previously skipped remove skip mark
+            if (skipped.has(current)) skipped.delete(current);
+            updateCounts();
+            updateSubmissionStatus(); // Call this after an answer is selected
+            // Automatically move to the next question if not the last one
+            if (timerType !== 'perQuestion') { // Only move to next question if not 'perQuestion' timer type
+              if (current < quizData.length - 1) {
+                current++;
+                if (timerType === 'perQuestion') {
+                  stopTimer();
+                  startTimer();
+                }
+              }
+            }
+            render(); // Always re-render after an answer is selected to update UI
+          });
+        });
+
+        // style flagged
+        const card = container.closest('.card');
+        if (flagged[current]) card.classList.add('flagged'); else card.classList.remove('flagged');
+
+        // enable/disable prev/next and skip
+        if (timerType === 'perQuestion') {
+          document.getElementById('prevBtn').style.display = 'none';
+          document.getElementById('nextBtn').style.display = ''; // Show next button
+          document.getElementById('skipBtn').style.display = 'none';
+          document.getElementById('nextBtn').disabled = false; // Ensure next button is enabled
+        } else {
+          document.getElementById('prevBtn').style.display = '';
+          document.getElementById('nextBtn').style.display = '';
+          document.getElementById('prevBtn').disabled = current === 0;
+          document.getElementById('nextBtn').disabled = current === quizData.length - 1;
+          const skipBtn = document.getElementById('skipBtn');
+          if (!enableSkip) {
+            skipBtn.style.display = 'none';
+          } else {
+            skipBtn.style.display = '';
+          }
+        }
+        updateSubmissionStatus(); // Call this after rendering the question
+      }
+
+      function updateCounts() {
+        const answeredCount = answers.filter(a => a !== null).length;
+        const flaggedCount = flagged.filter(Boolean).length;
+        const skippedCount = skipped.size;
+        document.getElementById('answeredCount').innerText = answeredCount;
+        document.getElementById('flaggedCount').innerText = flaggedCount;
+        document.getElementById('skippedCount').innerText = skippedCount;
+      }
+
+      // navigation
+      document.getElementById('prevBtn').addEventListener('click', () => { current = Math.max(0, current - 1); render(); });
+      document.getElementById('nextBtn').addEventListener('click', () => { current = Math.min(quizData.length - 1, current + 1); render(); });
+
+      // skip
+      document.getElementById('skipBtn').addEventListener('click', () => {
+        // Only allow skipping if the question is not already skipped and within skip limit
+        if (!skipped.has(current) && (skipLimit === 0 || skipped.size < skipLimit)) {
+          skipped.add(current);
+          answers[current] = null; // Set answer to null when skipped
+          render(); // Re-render the current question to update UI
+          // currentSkips++; // Removed this line
+          // move next if possible
+          if (current < quizData.length - 1) current++;
+          render();
+        } else if (skipped.has(current)) {
+          // If already skipped, do nothing or provide feedback that it's already skipped
+          // alert('This question is already skipped.');
+        } else {
+          alert('Skip limit reached!');
+        }
+      });
+
+      // flag
+      document.getElementById('flagBtn').addEventListener('click', () => {
+        flagged[current] = !flagged[current];
+        render();
+      });
+
+      // refresh button
+      document.getElementById('refreshBtn').addEventListener('click', () => {
+        refreshConfirmModal.show();
+      });
+
+      // confirm refresh button
+      document.getElementById('confirmRefreshBtn').addEventListener('click', () => {
+        location.reload();
+      });
+      let reviewModal = null;
+      let scoreModal = null;
+      let retakeConfirmModal = null;
+      let customSettingsModal = null; // Initialize custom settings modal
+      let refreshConfirmModal = null; // New modal for refresh confirmation
+
+      try {
+        reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        scoreModal = new bootstrap.Modal(document.getElementById('scoreModal'));
+        retakeConfirmModal = new bootstrap.Modal(document.getElementById('retakeConfirmModal'));
+        customSettingsModal = new bootstrap.Modal(document.getElementById('customSettingsModal')); // New modal
+        refreshConfirmModal = new bootstrap.Modal(document.getElementById('refreshConfirmModal')); // New modal
+      } catch (err) { console.warn('Unable to initialize bootstrap modals:', err); }
+
+      function populateReviewLists() {
+        const skippedList = document.getElementById('skippedList'); skippedList.innerHTML = '';
+        const unansweredList = document.getElementById('unansweredList'); unansweredList.innerHTML = '';
+        const flaggedList = document.getElementById('flaggedList'); flaggedList.innerHTML = '';
+        const answeredList = document.getElementById('answeredList'); answeredList.innerHTML = '';
+
+        let hasFlagged = false;
+        let hasSkipped = false;
+        let hasUnanswered = false;
+        let hasAnswered = false;
+
+        for (let i = 0; i < quizData.length; i++) {
+          const q = quizData[i];
+          const li = document.createElement('li');
+          li.classList.add('list-group-item', 'list-group-item-action');
+          li.dataset.questionIndex = i;
+          const questionText = q.question.length > 50 ? q.question.slice(0, 50) + '...' : q.question;
+          li.innerText = `Q${i + 1}: ${questionText}`;
+          li.addEventListener('click', (event) => {
+            // Prevent redirection if the click originated from a radio button or its label
+            if (event.target.tagName === 'INPUT' && event.target.type === 'radio' || event.target.tagName === 'LABEL') {
+              return;
+            }
+            safeHideModal(reviewModal, 'reviewModal'); current = i; render();
+          });
+
+          if (flagged[i]) {
+            flaggedList.appendChild(li);
+            hasFlagged = true;
+          } else if (skipped.has(i)) {
+            skippedList.appendChild(li);
+            hasSkipped = true;
+          } else if (answers[i] === null) {
+            unansweredList.appendChild(li);
+            hasUnanswered = true;
+          } else {
+            const selectedOptionIndex = answers[i];
+            const optionsHtml = q.options.map((option, optIndex) => {
+              const isChecked = (optIndex === selectedOptionIndex) ? 'checked' : '';
+              return `
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="reviewQuestion${i}" id="reviewQuestion${i}Option${optIndex}" value="${optIndex}" ${isChecked} onclick="event.stopPropagation();">
+              <label class="form-check-label" for="reviewQuestion${i}Option${optIndex}" onclick="event.stopPropagation();">
+                ${option}
+              </label>
+            </div>
+          `;
+            }).join('');
+
+            li.innerHTML = `
+          <div>Q${i + 1}: ${questionText}</div>
+          <div class="options-container mt-2">${optionsHtml}</div>
+        `;
+            answeredList.appendChild(li);
+            hasAnswered = true;
+
+            // Add event listeners to the radio buttons for changing answers
+            li.querySelectorAll('input[type="radio"]').forEach(radio => {
+              radio.addEventListener('change', (event) => {
+                event.stopPropagation(); // Prevent the click event from bubbling up to the li element
+                answers[i] = parseInt(event.target.value);
+                updateSubmissionStatus();
+
+                // Manually update the checked state of radio buttons for the current question
+                const questionContainer = event.target.closest('.options-container'); // Find the container for options
+                if (questionContainer) {
+                  questionContainer.querySelectorAll(`input[name="reviewQuestion${i}"]`).forEach(radioBtn => {
+                    radioBtn.checked = (radioBtn === event.target); // Check only the clicked radio button
+                  });
+                }
+              });
+            });
+          }
+        }
+
+        // Hide sections if their lists are empty
+        document.getElementById('flaggedList').closest('.col-md-6').style.display = hasFlagged ? 'block' : 'none';
+        document.getElementById('skippedList').closest('.col-md-6').style.display = hasSkipped ? 'block' : 'none';
+        document.getElementById('unansweredList').closest('.col-md-6').style.display = hasUnanswered ? 'block' : 'none';
+        document.getElementById('answeredQuestionsSection').style.display = hasUnanswered ? 'none' : 'block'; // Show answered section only if no unanswered questions
+
+        if (hasSkipped) {
+          const skippedListElement = document.getElementById('skippedList');
+          // Clear previous messages to avoid duplication
+          const existingMessage = skippedListElement.previousElementSibling;
+          if (existingMessage && existingMessage.classList.contains('skip-message')) {
+            existingMessage.remove();
+          }
+          const messageDiv = document.createElement('div');
+          messageDiv.classList.add('small', 'text-muted', 'mb-2', 'skip-message');
+          messageDiv.innerText = 'Select option to remove from skip';
+          skippedListElement.insertAdjacentElement('beforebegin', messageDiv);
+        }
+
+        updateSubmissionStatus(); // Call this after populating review lists
+      }
+
+      function updateSubmissionStatus() {
+        let allNonSkippedAnswered = true;
+        for (let i = 0; i < quizData.length; i++) {
+          if (!skipped.has(i) && answers[i] === null) {
+            allNonSkippedAnswered = false;
+            break;
+          }
+        }
+
+        const confirmSubmitBtn = document.getElementById('confirmSubmit');
+        const submissionWarning = document.getElementById('submissionWarning');
+        const declarationCheckbox = document.getElementById('declarationCheckbox');
+
+        if (allNonSkippedAnswered && declarationCheckbox.checked) {
+          confirmSubmitBtn.disabled = false;
+          submissionWarning.style.display = 'none';
+        } else {
+          confirmSubmitBtn.disabled = true;
+          submissionWarning.style.display = 'block';
+        }
+      }
+
+      document.getElementById('declarationCheckbox').addEventListener('change', updateSubmissionStatus);
+      document.getElementById('confirmSubmit').addEventListener('click', () => {
+        if (!document.getElementById('confirmSubmit').disabled) {
+          safeHideModal(reviewModal, 'reviewModal'); stopTimer(); showScore();
+        }
+      });
+
+      document.getElementById('reviewBtn').addEventListener('click', () => {
+        if (timerType === 'perQuestion') {
+          stopTimer();
+          showScore();
+        } else {
+          populateReviewLists();
+          safeShowModal(reviewModal, 'reviewModal');
+          updateSubmissionStatus(); // Call this when review modal is shown
+        }
+      });
+
+      // timer
+      function startTimer() {
+        if (!enableTimer) {
+          document.getElementById('timer').innerText = '--:--';
+          return;
+        }
+
+        stopTimer(); // Clear any existing timer
+
+        let remaining;
+        if (timerType === 'perQuestion') {
+          remaining = parseInt(document.getElementById('timerDuration').value); // Duration is in seconds for perQuestion
+        } else {
+          remaining = durationSec; // For whole test, use the global durationSec
+        }
+
+        updateTimerDisplay(remaining);
+        timerInterval = setInterval(() => {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(timerInterval);
+            if (timerType === 'perQuestion') {
+              // Handle per-question timer expiry
+              // Disable current question options
+              const currentQuestionOptions = document.querySelectorAll(`#question${current} input[type="radio"]`);
+              currentQuestionOptions.forEach(option => option.disabled = true);
+
+              // Mark question as skipped/unanswered if not already answered
+              if (answers[current] === null) {
+                skipped.add(current);
+                updateSubmissionStatus();
+              }
+
+              // Move to next question
+              nextQuestion();
+              // Start timer for the new question if it's still perQuestion type
+              // This check is important because nextQuestion() might lead to showScore()
+              // or change the timerType if the quiz ends.
+              // The logic to start the timer for the new question is now inside nextQuestion()
+              // if (timerType === 'perQuestion' && current < quizData.length) {
+              //   startTimer();
+              // }
+            } else {
+              // Handle whole test timer expiry
+              alert('Time up! Submitting automatically.');
+              showScore();
+            }
+          }
+          updateTimerDisplay(remaining);
+        }, 1000);
+      }
+      function stopTimer() { if (timerInterval) clearInterval(timerInterval); }
+
+      function nextQuestion() {
+        if (current < quizData.length - 1) {
+          current++;
+          render();
+          if (timerType === 'perQuestion') {
+            stopTimer();
+            startTimer();
+          }
+        } else {
+          // If it's the last question, show score or handle end of quiz
+          showScore();
+        }
+      }
+
+      function updateTimerDisplay(sec) {
+        if (!enableTimer) return;
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        document.getElementById('timer').innerText = `${m}:${s}`;
+      }
+
+      // scoring & report
+      function showScore() {
+        // compute
+        let correct = 0;
+        let skippedCount = 0;
+        const details = quizData.map((q, i) => {
+          const user = answers[i];
+          const isSkipped = skipped.has(i);
+          if (isSkipped) skippedCount++;
+          const isCorrect = user === q.correctIndex;
+          if (isCorrect) correct++;
+          return { i, question: q.question, options: q.options, user, correctIndex: q.correctIndex, isCorrect, explanation: q.explanation, isSkipped };
+        });
+
+        const scoreSummary = document.getElementById('scoreSummary');
+        scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${quizData.length}</h4><div class='small text-muted'>Answered: ${answers.filter(a => a !== null).length - skippedCount}</div><div class='small text-muted'>Skipped: ${skippedCount}</div>`;
+        if (enableTimer) {
+          scoreSummary.innerHTML += `<div class='small text-muted'>Time taken: ${formatTime(durationSec - (parseInt(document.getElementById('timer').innerText.split(':')[0]) * 60 + parseInt(document.getElementById('timer').innerText.split(':')[1])))}</div>`;
+        } else {
+          scoreSummary.innerHTML += `<div class='small text-muted'>Timer: Disabled</div>`;
+        }
+
+
+        const detailed = document.getElementById('detailedReport'); detailed.innerHTML = '';
+        details.forEach(d => {
+          const wrap = document.createElement('div'); wrap.className = 'mb-3 p-2 border rounded';
+          const qh = document.createElement('div'); qh.innerHTML = `<strong>Q${d.i + 1}.</strong> ${d.question} ${d.isSkipped ? '<span class="badge bg-info">Skipped</span>' : ''}`;
+          wrap.appendChild(qh);
+          const ul = document.createElement('div');
+          d.options.forEach((opt, j) => {
+            const p = document.createElement('div');
+            p.innerText = opt;
+            if (j === d.correctIndex) p.className = 'correct';
+            if (d.user === j && !d.isCorrect) p.className = 'wrong';
+            if (d.user === j && d.isCorrect) p.className = 'correct';
+            ul.appendChild(p);
+          });
+          const ex = document.createElement('div'); ex.className = 'mt-2 explain'; ex.innerHTML = `<strong>Explanation:</strong> ${d.explanation}`;
+          wrap.appendChild(ul); wrap.appendChild(ex);
+          detailed.appendChild(wrap);
+        });
+
+        safeShowModal(scoreModal, 'scoreModal');
+      }
+
+      function formatTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      }
+
+      // Global variable to store initial quiz settings for retake functionality
+      let initialQuizSettings = {};
+
+      function retake(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting) {
+        enableTimer = enableTimerSetting;
+        durationSec = durationSetting;
+        skipLimit = skipLimitSetting;
+        timerType = timerTypeSetting;
+        enableSkip = enableSkipSetting; // Set the new enableSkip variable
+        numQuestions = numQuestionsSetting; // Set the number of questions
+
+        // restore fresh data from original quizData then shuffle questions and options
+        quizData = JSON.parse(JSON.stringify(quizDataOriginal));
+        shuffle(quizData);
+        quizData = quizData.slice(0, numQuestions); // Limit the number of questions
+        quizData = prepareQuestionData(quizData);
+
+        // reset answers/flags/skips AFTER quizData is finalized
+        answers = Array(quizData.length).fill(null);
+        flagged = Array(quizData.length).fill(false);
+        skipped = new Set();
+        currentSkips = 0;
+
+        current = 0;
+        render();
+        stopTimer(); // Stop any existing timer
+        startTimer();
+      }
+
+      // New function to start the quiz
+      function startQuiz(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting) {
+        // Store initial settings
+        initialQuizSettings = {
+          enableTimer: enableTimerSetting,
+          duration: durationSetting,
+          skipLimit: skipLimitSetting,
+          timerType: timerTypeSetting,
+          enableSkip: enableSkipSetting,
+          numQuestions: numQuestionsSetting
+        };
+
+        document.getElementById('quickTestBtn').style.display = 'none';
+        document.getElementById('customTestBtn').style.display = 'none';
+        document.getElementById('quizHeaderContainer').style.display = 'block'; // Show quiz header container
+        document.getElementById('retakeFromScore').style.display = 'block'; // Show retake button
+        document.getElementById('questionArea').closest('.card').style.display = 'block'; // Show quiz area
+        document.getElementById('statusBar').style.display = 'block'; // Show status bar
+
+        retake(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting);
+      }
+
+      // Event Listeners for new buttons
+      document.getElementById('quickTestBtn').addEventListener('click', () => {
+        // Default settings for quick test: timer enabled (10 min), unlimited skips, whole test timer, skip disabled, 10 questions
+        startQuiz(true, 10 * 60, 0, 'whole', false, 10);
+      });
+
+      document.getElementById('customTestBtn').addEventListener('click', () => {
+        // Set max questions for custom test
+        console.log('quizDataOriginal.length:', quizDataOriginal.length); // Debugging line
+        document.getElementById('numQuestions').max = quizDataOriginal.length;
+        safeShowModal(customSettingsModal, 'customSettingsModal');
+      });
+
+      document.getElementById('startCustomTestBtn').addEventListener('click', () => {
+        const enableTimerSetting = document.getElementById('enableTimer').checked;
+        let durationSetting = parseInt(document.getElementById('timerDuration').value);
+        if (isNaN(durationSetting)) { // Ensure durationSetting is a valid number
+          durationSetting = 0; // Default to 0 or a sensible default if NaN
+        }
+        durationSetting *= 60; // Convert minutes to seconds
+        const enableSkipSetting = document.getElementById('enableSkip').checked;
+        let skipLimitSetting = enableSkipSetting ? parseInt(document.getElementById('skipCount').value) : 0;
+        const timerTypeSetting = document.querySelector('input[name="timerType"]:checked').value;
+        const numQuestionsSetting = parseInt(document.getElementById('numQuestions').value);
+
+        // Calculate max allowed skips based on numQuestionsSetting
+        const maxAllowedSkips = Math.max(1, Math.floor(numQuestionsSetting * 0.3));
+
+        // Ensure skipLimitSetting does not exceed maxAllowedSkips
+        if (skipLimitSetting > maxAllowedSkips) {
+          skipLimitSetting = maxAllowedSkips;
+        }
+
+        safeHideModal(customSettingsModal, 'customSettingsModal');
+        startQuiz(enableTimerSetting, durationSetting, skipLimitSetting, timerTypeSetting, enableSkipSetting, numQuestionsSetting);
+      });
+
+      // Update skipCount max attribute when numQuestions changes
+      document.getElementById('numQuestions').addEventListener('input', (e) => {
+        const numQuestions = parseInt(e.target.value);
+        const skipCountInput = document.getElementById('skipCount');
+        const maxAllowedSkips = Math.max(1, Math.floor(numQuestions * 0.3));
+        skipCountInput.max = maxAllowedSkips;
+        if (parseInt(skipCountInput.value) > maxAllowedSkips) {
+          skipCountInput.value = maxAllowedSkips;
+        }
+      });
+
+      // Toggle timer settings visibility
+      document.getElementById('enableTimer').addEventListener('change', (e) => {
+        document.getElementById('timerSettings').style.display = e.target.checked ? 'block' : 'none';
+      });
+
+      // Toggle skip settings visibility
+      document.getElementById('enableSkip').addEventListener('change', (e) => {
+        document.getElementById('skipSettings').style.display = e.target.checked ? 'block' : 'none';
+      });
+
+      // Retake from score modal
+      document.getElementById('retakeFromScore').addEventListener('click', () => { // This is the retake button from the main quiz area
+        safeShowModal(retakeConfirmModal, 'retakeConfirmModal');
+      });
+
+      document.getElementById('confirmRetakeBtn').addEventListener('click', () => {
+        safeHideModal(retakeConfirmModal, 'retakeConfirmModal');
+        // Use stored initial settings for retake
+        retake(initialQuizSettings.enableTimer, initialQuizSettings.duration, initialQuizSettings.skipLimit, initialQuizSettings.timerType, initialQuizSettings.enableSkip, initialQuizSettings.numQuestions);
+      });
+
+      document.getElementById('retakeFromScoreModal').addEventListener('click', () => {
+        safeHideModal(scoreModal, 'scoreModal');
+        safeShowModal(retakeConfirmModal, 'retakeConfirmModal');
+      });
+
+      document.getElementById('closeScore').addEventListener('click', () => { /* no-op */ });
+
+      // Initial state: hide quiz area and status bar, show start buttons
+      document.getElementById('questionArea').closest('.card').style.display = 'none';
+      document.getElementById('statusBar').style.display = 'none';
+      document.getElementById('retakeFromScore').style.display = 'none'; // Hide retake button initially
+      document.getElementById('quizHeader').style.display = 'none'; // Hide quiz header initially
+
+        const timerDurationInput = document.getElementById('timerDuration');
+        const decreaseTimerDurationBtn = document.getElementById('decreaseTimerDuration');
+        const increaseTimerDurationBtn = document.getElementById('increaseTimerDuration');
+
+        decreaseTimerDurationBtn.addEventListener('click', function() {
+          let currentValue = parseInt(timerDurationInput.value);
+          if (currentValue > parseInt(timerDurationInput.min)) {
+            timerDurationInput.value = currentValue - 1;
+          }
+        });
+
+        increaseTimerDurationBtn.addEventListener('click', function() {
+          let currentValue = parseInt(timerDurationInput.value);
+          if (currentValue < parseInt(timerDurationInput.max) || isNaN(parseInt(timerDurationInput.max))) {
+            timerDurationInput.value = currentValue + 1;
+          }
+        });
+
+        const numQuestionsInput = document.getElementById('numQuestions');
+        const decreaseNumQuestionsBtn = document.getElementById('decreaseNumQuestions');
+        const increaseNumQuestionsBtn = document.getElementById('increaseNumQuestions');
+        const skipCountInput = document.getElementById('skipCount'); // Moved declaration here
+
+        // Set initial max for skipCount based on initial numQuestions
+        const initialNumQuestions = parseInt(numQuestionsInput.value);
+        // const skipCountInput = document.getElementById('skipCount'); // This line was causing the redeclaration error
+        const initialMaxAllowedSkips = Math.max(1, Math.floor(initialNumQuestions * 0.3));
+        skipCountInput.max = initialMaxAllowedSkips;
+        if (parseInt(skipCountInput.value) > initialMaxAllowedSkips) {
+          skipCountInput.value = initialMaxAllowedSkips;
+        }
+
+        decreaseNumQuestionsBtn.addEventListener('click', function() {
+          let currentValue = parseInt(numQuestionsInput.value);
+          if (currentValue > parseInt(numQuestionsInput.min)) {
+            numQuestionsInput.value = currentValue - 1;
+          }
+        });
+
+        increaseNumQuestionsBtn.addEventListener('click', function() {
+          let currentValue = parseInt(numQuestionsInput.value);
+          if (currentValue < parseInt(numQuestionsInput.max) || isNaN(parseInt(numQuestionsInput.max))) {
+            numQuestionsInput.value = currentValue + 1;
+          }
+        });
+
+        const decreaseSkipCountBtn = document.getElementById('decreaseSkipCount');
+        const increaseSkipCountBtn = document.getElementById('increaseSkipCount');
+        const skipSettingsDiv = document.getElementById('skipSettings');
+        const enableSkipCheckbox = document.getElementById('enableSkip');
+
+        decreaseSkipCountBtn.addEventListener('click', function() {
+          let currentValue = parseInt(skipCountInput.value);
+          if (currentValue > parseInt(skipCountInput.min)) {
+            skipCountInput.value = currentValue - 1;
+          }
+        });
+
+        increaseSkipCountBtn.addEventListener('click', function() {
+          let currentValue = parseInt(skipCountInput.value);
+          if (currentValue < parseInt(skipCountInput.max) || isNaN(parseInt(skipCountInput.max))) {
+            skipCountInput.value = currentValue + 1;
+          }
+        });
+
+        enableSkipCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            skipSettingsDiv.style.display = 'block';
+          } else {
+            skipSettingsDiv.style.display = 'none';
+          }
+        });
+
+        // Initial state for skipSettingsDiv based on enableSkipCheckbox
+        if (!enableSkipCheckbox.checked) {
+          skipSettingsDiv.style.display = 'none';
+        }
+
+    }); // End of DOMContentLoaded
+    </script>
+    </body>
+</html>
+
+<div class="alert alert-danger" role="alert" id="warningMessage" style="display: none;">
+  Please answer all non-skipped questions before final submit.
+</div>
+
+<div class="container mt-4">
+</div>
