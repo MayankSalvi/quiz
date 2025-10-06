@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UGC NET Education - Quiz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{padding:20px;background:#f8f9fa}
+    .option-label{display:block;cursor:pointer;padding:8px;border-radius:6px}
+    .option-label:hover{background:#f1f1f1}
+    .flagged{background:#fff3cd}
+    .skipped-badge{font-size:0.75rem}
+    .timer{font-family:monospace}
+    .explain{font-size:0.95rem}
+    .correct{color:green}
+    .wrong{color:red}
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="row mb-3">
+    <div class="col-md-8">
+      <h3>UGC NET (Paper-II) — Education: Practice Quiz</h3>
+      <div class="small text-muted">10 questions with explanations — features: prev/next/skip/flag, review before final submit, timer, scorecard and retake with shuffling.</div>
+    </div>
+    <div class="col-md-4 text-end">
+      <div>Time left: <span id="timer" class="timer fs-5">--:-</span></div>
+       <button id="retakeFromScore" type="button" class="btn btn-outline-primary">Retake (shuffle)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div id="questionArea">
+        <!-- question content injected here -->
+      </div>
+
+      <div class="d-flex justify-content-between mt-3">
+        <div>
+          <button id="prevBtn" class="btn btn-secondary btn-sm">Prev</button>
+          <button id="nextBtn" class="btn btn-secondary btn-sm">Next</button>
+        </div>
+        <div>
+          <button id="skipBtn" class="btn btn-outline-warning btn-sm">Skip</button>
+          <button id="flagBtn" class="btn btn-outline-info btn-sm">Flag</button>
+          <button id="reviewBtn" class="btn btn-success btn-sm">Review & Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3" id="statusBar">
+    <span id="qIndex"></span>
+    <span class="ms-3">Answered: <span id="answeredCount">0</span></span>
+    <span class="ms-3">Flagged: <span id="flaggedCount">0</span></span>
+    <span class="ms-3">Skipped: <span id="skippedCount">0</span></span>
+  </div>
+
+  <!-- Retake Confirmation Modal -->
+  <div class="modal fade" id="retakeConfirmModal" tabindex="-1" aria-labelledby="retakeConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="retakeConfirmModalLabel">Confirm Retake</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to retake the quiz and shuffle questions? Your current progress will be lost.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmRetakeBtn">Retake</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Modal -->
+  <div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Review before final submit</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="reviewLists" class="row">
+            <div class="col-md-6">
+              <h6>Unanswered / Skipped</h6>
+              <ul id="skippedList" class="list-group"></ul>
+            </div>
+            <div class="col-md-6">
+              <h6>Flagged</h6>
+              <ul id="flaggedList" class="list-group"></ul>
+            </div>
+          </div>
+          <hr>
+          <div class="small text-muted">You can click an item to jump to the question and change your answer.</div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelSubmit" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button id="confirmSubmit" type="button" class="btn btn-primary">Submit Final Answers</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score Modal -->
+  <div class="modal fade" id="scoreModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Scorecard</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="scoreSummary"></div>
+          <hr>
+          <div id="detailedReport"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="closeScore" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button id="retakeFromScoreModal" type="button" class="btn btn-outline-primary">Retake (shuffle)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- IMPORTANT: load Bootstrap JS first so `bootstrap` is available to our script -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Application script: wrapped in DOMContentLoaded for safety -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  if(typeof bootstrap === 'undefined'){
+    console.error('Bootstrap JS is not loaded. The app requires Bootstrap JavaScript (bootstrap.bundle.min.js) for modals and other components.');
+    // still proceed, but modal.show() calls will be guarded
+  }
+
+  // ---------------------- QUIZ DATA (JSON) ----------------------
+  const quizData = [
+    {
+      "id": 1,
+      "question": "Which learning theory emphasizes the role of external reinforcement in shaping behaviour?",
+      "options": ["Constructivism","Behaviorism","Humanistic Theory","Cognitive Development Theory"],
+      "correctIndex": 1,
+      "explanation": "Behaviorism (Skinner, Pavlov) emphasizes observable behaviour and the role of external reinforcement and punishment in shaping behaviour."
+    },
+    {
+      "id": 2,
+      "question": "Who proposed the stages of cognitive development (sensorimotor, preoperational, concrete operational, formal operational)?",
+      "options": ["Vygotsky","Piaget","Bruner","Kohlberg"],
+      "correctIndex": 1,
+      "explanation": "Jean Piaget proposed the four-stage theory of cognitive development describing how children's thinking evolves qualitatively with age."
+    },
+    {
+      "id": 3,
+      "question": "Zone of Proximal Development (ZPD) is a key concept in which theory?",
+      "options": ["Behaviorism","Constructivism","Sociocultural Theory","Multiple Intelligences"],
+      "correctIndex": 2,
+      "explanation": "Lev Vygotsky's Sociocultural Theory introduced ZPD — the gap between what a learner can do independently and with guidance."
+    },
+    {
+      "id": 4,
+      "question": "Which assessment is primarily formative in nature?",
+      "options": ["Terminal examination","Monthly board exam","Diagnostic test after instruction","Weekly classroom quiz with feedback"],
+      "correctIndex": 3,
+      "explanation": "Weekly classroom quizzes with timely feedback are formative assessments aimed at monitoring learning and informing instruction."
+    },
+    {
+      "id": 5,
+      "question": "Bloom's taxonomy originally categorized cognitive objectives into how many levels?",
+      "options": ["3","4","6","7"],
+      "correctIndex": 2,
+      "explanation": "Bloom's original taxonomy (1956) described six cognitive levels: Knowledge, Comprehension, Application, Analysis, Synthesis, Evaluation."
+    },
+    {
+      "id": 6,
+      "question": "Which method is best suited to study a single case in depth?",
+      "options": ["Survey method","Experimental method","Case study method","Correlation method"],
+      "correctIndex": 2,
+      "explanation": "Case study method involves an in-depth, contextualized investigation of a single individual, group, or institution."
+    },
+    {
+      "id": 7,
+      "question": "Reliability of a test refers to: ",
+      "options": ["Accuracy of measurement","Consistency of measurement","Relevance to curriculum","Difficulty level"],
+      "correctIndex": 1,
+      "explanation": "Reliability indicates consistency or stability of test scores over time, across forms, or across items."
+    },
+    {
+      "id": 8,
+      "question": "Which pedagogy strongly advocates learner-centred, inquiry-based learning and discovery?",
+      "options": ["Lecture method","Project-based/constructivist pedagogy","Rote learning","Direct instruction only"],
+      "correctIndex": 1,
+      "explanation": "Constructivist and project-based pedagogies promote learner-centred inquiry, active exploration and building understanding."
+    },
+    {
+      "id": 9,
+      "question": "What is 'authentic assessment'?",
+      "options": ["Multiple choice tests only","Assessment of real-world tasks and performances","Grading based on attendance","Standardized testing only"],
+      "correctIndex": 1,
+      "explanation": "Authentic assessment measures learners' ability to apply knowledge to real-world tasks, performances, or projects."
+    },
+    {
+      "id": 10,
+      "question": "Which Indian education commission emphasized 'learning without burden' and recommended changes in the curriculum?",
+      "options": ["Kothari Commission","National Policy on Education 1986","Mudaliar Commission","Yashpal Committee"],
+      "correctIndex": 1,
+      "explanation": "The National Policy on Education (1986) and subsequent efforts emphasized reducing burden and stress on students and curricular reforms."
+    }
+  ];
+
+  // ---------------------- STATE ----------------------
+  let data = JSON.parse(JSON.stringify(quizData)); // working copy
+  let current = 0;
+  let answers = Array(data.length).fill(null); // store chosen option index
+  let flagged = Array(data.length).fill(false);
+  let skipped = new Set();
+  let durationSec = 10 * 60; // default 10 minutes
+  let timerInterval = null;
+
+  // Utility: shuffle array (Fisher-Yates)
+  function shuffle(array){
+    for(let i=array.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [array[i],array[j]]=[array[j],array[i]];
+    }
+  }
+
+  function prepareQuestionData(){
+    // shuffle options for each question but keep track of correctIndex mapping
+    data.forEach(q=>{
+      const opt = q.options.map((o,i)=>({o,orig:i}));
+      shuffle(opt);
+      q.options = opt.map(x=>x.o);
+      // find new index of original correct
+      const newIndex = opt.findIndex(x=>x.orig===q.correctIndex);
+      q.correctIndex = newIndex;
+    });
+  }
+
+  // helper to safely show bootstrap modal (fallback to simple class toggle if bootstrap missing)
+  function safeShowModal(modalInstance, modalId){
+    if(modalInstance && typeof modalInstance.show === 'function'){
+      modalInstance.show();
+    } else {
+      const el = document.getElementById(modalId);
+      if(el){ el.classList.add('show','d-block'); el.style.backgroundColor = 'rgba(0,0,0,0.4)'; }
+    }
+  }
+  function safeHideModal(modalInstance, modalId){
+    if(modalInstance && typeof modalInstance.hide === 'function'){
+      modalInstance.hide();
+    } else {
+      const el = document.getElementById(modalId);
+      if(el){ el.classList.remove('show','d-block'); el.style.backgroundColor = ''; }
+    }
+  }
+
+  // render question
+  function render(){
+    const q = data[current];
+    const container = document.getElementById('questionArea');
+    container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current+1}.</strong> ${q.question}</div>\n        <div><span class=\"badge bg-${flagged[current]? 'warning' : 'secondary'}\">${flagged[current]? 'Flagged' : 'Not flagged'}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt,idx)=>`\n        <label class=\"option-label border p-2 mb-2 ${answers[current]===idx? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current]===idx? 'checked' : ''} style=\"margin-right:8px\"> ${opt}\n        </label>\n      `).join('')}</div>\n      <div class=\"mt-2 small text-muted\">${q.options.length} options</div>\n    `;
+
+    document.getElementById('qIndex').innerText = `Question ${current+1} of ${data.length}`;
+    updateCounts();
+
+    // wire option clicks
+    document.querySelectorAll('input[name="opt"]').forEach(inp=>{
+      inp.addEventListener('change', (e)=>{
+        answers[current] = parseInt(e.target.value);
+        // if previously skipped remove skip mark
+        if(skipped.has(current)) skipped.delete(current);
+        updateCounts();
+        // Automatically move to the next question if not the last one
+        if (current < data.length - 1) {
+          current++;
+          render();
+        }
+      });
+    });
+
+    // style flagged
+    const card = container.closest('.card');
+    if(flagged[current]) card.classList.add('flagged'); else card.classList.remove('flagged');
+
+    // enable/disable prev/next
+    document.getElementById('prevBtn').disabled = current===0;
+    document.getElementById('nextBtn').disabled = current===data.length-1;
+  }
+
+  function updateCounts(){
+    const answeredCount = answers.filter(a=>a!==null).length;
+    const flaggedCount = flagged.filter(Boolean).length;
+    const skippedCount = skipped.size;
+    document.getElementById('answeredCount').innerText = answeredCount;
+    document.getElementById('flaggedCount').innerText = flaggedCount;
+    document.getElementById('skippedCount').innerText = skippedCount;
+  }
+
+  // navigation
+  document.getElementById('prevBtn').addEventListener('click', ()=>{ current = Math.max(0,current-1); render(); });
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ current = Math.min(data.length-1,current+1); render(); });
+
+  // skip
+  document.getElementById('skipBtn').addEventListener('click', ()=>{
+    skipped.add(current);
+    // move next if possible
+    if(current < data.length-1) current++;
+    render();
+  });
+
+  // flag
+  document.getElementById('flagBtn').addEventListener('click', ()=>{
+    flagged[current] = !flagged[current];
+    render();
+  });
+
+  // review & submit
+  let reviewModal = null;
+  let scoreModal = null;
+  let retakeConfirmModal = null;
+  try{
+    if(typeof bootstrap !== 'undefined'){
+      reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+      scoreModal = new bootstrap.Modal(document.getElementById('scoreModal'));
+      retakeConfirmModal = new bootstrap.Modal(document.getElementById('retakeConfirmModal'));
+    }
+  }catch(err){ console.warn('Unable to initialize bootstrap modals:', err); }
+
+  function populateReviewLists(){
+    const skippedList = document.getElementById('skippedList'); skippedList.innerHTML='';
+    skipped.forEach(i=>{
+      const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${data[i].question.slice(0,80)}`;
+      li.addEventListener('click', ()=>{ safeHideModal(reviewModal,'reviewModal'); current=i; render(); });
+      skippedList.appendChild(li);
+    });
+    const flaggedList = document.getElementById('flaggedList'); flaggedList.innerHTML='';
+    flagged.forEach((f,i)=>{ if(f){ const li = document.createElement('li'); li.className='list-group-item list-group-item-action'; li.innerText = `Q${i+1}: ${data[i].question.slice(0,80)}`; li.addEventListener('click', ()=>{ safeHideModal(reviewModal,'reviewModal'); current=i; render(); }); flaggedList.appendChild(li); }});
+  }
+
+  document.getElementById('reviewBtn').addEventListener('click', ()=>{ populateReviewLists(); safeShowModal(reviewModal,'reviewModal'); });
+
+  document.getElementById('confirmSubmit').addEventListener('click', ()=>{
+    // final scoring
+    safeHideModal(reviewModal,'reviewModal'); stopTimer(); showScore();
+  });
+
+  // timer
+  function startTimer(){
+    let remaining = durationSec;
+    updateTimerDisplay(remaining);
+    timerInterval = setInterval(()=>{
+      remaining--;
+      if(remaining<=0){ clearInterval(timerInterval); alert('Time up! Submitting automatically.'); showScore(); }
+      updateTimerDisplay(remaining);
+    },1000);
+  }
+  function stopTimer(){ if(timerInterval) clearInterval(timerInterval); }
+  function updateTimerDisplay(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = (sec%60).toString().padStart(2,'0');
+    document.getElementById('timer').innerText = `${m}:${s}`;
+  }
+
+  // scoring & report
+  function showScore(){
+    // compute
+    let correct=0;
+    const details = data.map((q,i)=>{
+      const user = answers[i];
+      const isCorrect = user===q.correctIndex;
+      if(isCorrect) correct++;
+      return {i,question:q.question,options:q.options,user,correctIndex:q.correctIndex,isCorrect,explanation:q.explanation};
+    });
+
+    const scoreSummary = document.getElementById('scoreSummary');
+    scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${data.length}</h4><div class='small text-muted'>Answered: ${answers.filter(a=>a!==null).length}</div>`;
+
+    const detailed = document.getElementById('detailedReport'); detailed.innerHTML='';
+    details.forEach(d=>{
+      const wrap = document.createElement('div'); wrap.className='mb-3 p-2 border rounded';
+      const qh = document.createElement('div'); qh.innerHTML = `<strong>Q${d.i+1}.</strong> ${d.question}`;
+      wrap.appendChild(qh);
+      const ul = document.createElement('div');
+      d.options.forEach((opt,j)=>{
+        const p = document.createElement('div');
+        p.innerText = opt;
+        if(j===d.correctIndex) p.className='correct';
+        if(d.user===j && !d.isCorrect) p.className='wrong';
+        if(d.user===j && d.isCorrect) p.className='correct';
+        ul.appendChild(p);
+      });
+      const ex = document.createElement('div'); ex.className='mt-2 explain'; ex.innerHTML = `<strong>Explanation:</strong> ${d.explanation}`;
+      wrap.appendChild(ul); wrap.appendChild(ex);
+      detailed.appendChild(wrap);
+    });
+
+    safeShowModal(scoreModal,'scoreModal');
+  }
+
+  // retake/shuffle
+  function retake(){
+    // reset answers/flags/skips
+    answers = Array(data.length).fill(null);
+    flagged = Array(data.length).fill(false);
+    skipped = new Set();
+    // restore fresh data from original quizData then shuffle questions and options
+    data = JSON.parse(JSON.stringify(quizData));
+    shuffle(data);
+    prepareQuestionData();
+    current = 0; render(); startTimer();
+  }
+
+  document.getElementById('retakeFromScore').addEventListener('click', ()=>{
+    safeShowModal(retakeConfirmModal, 'retakeConfirmModal');
+  });
+
+  document.getElementById('confirmRetakeBtn').addEventListener('click', ()=>{
+    safeHideModal(retakeConfirmModal, 'retakeConfirmModal');
+    retake();
+  });
+
+  document.getElementById('retakeFromScoreModal').addEventListener('click', ()=>{
+    safeHideModal(scoreModal,'scoreModal');
+    safeShowModal(retakeConfirmModal, 'retakeConfirmModal');
+  });
+
+  document.getElementById('closeScore').addEventListener('click', ()=>{ /* no-op */ });
+
+  // initialize
+  prepareQuestionData(); render(); startTimer();
+
+});
+</script>
+</body>
+</html>
