@@ -106,7 +106,10 @@
         <!-- fine  -->
         <div class="row mb-2">
             <div class="col-md-12">
-                <h3 id="quizTitle" class="mb-3">Practice quiz</h3>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 id="quizTitle" class="mb-0">Practice quiz</h3>
+                    <input type="text" id="subjectSearch" class="form-control w-50" placeholder="Search subject...">
+                </div>
 
                 <!-- Timer + Buttons Row -->
                 <div id="quizHeaderContainer" class="d-none justify-content-between align-items-center flex-wrap py-1">
@@ -124,6 +127,7 @@
                             Retake 
                         </button>
                         <button id="refreshBtn" class="btn btn-primary btn-sm">Refresh</button>
+                <button id="leaveBtn" class="btn btn-danger btn-sm ms-2" disabled>Leave</button>
                     </div>
                 </div>
             </div>
@@ -210,24 +214,44 @@
     </div>
 
     <!-- Refresh Confirmation Modal -->
-    <div class="modal fade" id="refreshConfirmModal" tabindex="-1" aria-labelledby="refreshConfirmModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="refreshConfirmModalLabel">Confirm Refresh</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to refresh the page? Your current progress will be lost.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmRefreshBtn">Refresh</button>
+            <div class="modal fade" id="refreshConfirmModal" tabindex="-1" aria-labelledby="refreshConfirmModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="refreshConfirmModalLabel">Confirm Refresh</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to refresh the page? Your current progress will be lost.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="confirmRefreshBtn">Refresh</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+
+            <!-- Leave Confirmation Modal -->
+            <div class="modal fade" id="leaveConfirmModal" tabindex="-1" aria-labelledby="leaveConfirmModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="leaveConfirmModalLabel">Confirm Leave Test</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to leave the test? Your current progress will be saved and you will see your scorecard.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmLeaveBtn">Leave Test</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 
 
@@ -465,18 +489,23 @@
             }
 
             // Initialize subject selection and hide test buttons
-            renderSubjectTiles();
+            renderSubjectTiles('');
             document.getElementById('testButtons').style.display = 'none';
             document.getElementById('subjectSelectionArea').style.display = 'block';
             document.getElementById('quizContainer').style.display = 'none';
+            document.getElementById('subjectSearch').style.display = 'block';
 
             // ---------------------- QUIZ DATA (JSON) ----------------------
 
 
-            function renderSubjectTiles() {
+            function renderSubjectTiles(searchTerm = '') {
                 const subjectSelectionArea = document.getElementById('subjectSelectionArea');
                 subjectSelectionArea.innerHTML = ''; // Clear existing content
-                for (const subject in quizDataOriginal) {
+                const filteredSubjects = Object.keys(quizDataOriginal).filter(subject =>
+                    subject.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+
+                filteredSubjects.forEach(subject => {
                     const tile = document.createElement('div');
                     tile.className = 'subject-tile';
 
@@ -501,7 +530,7 @@
                         selectSubject(subject);
                     });
                     subjectSelectionArea.appendChild(tile);
-                }
+                });
             }
 
             function selectSubject(subject) {
@@ -565,6 +594,7 @@
                 document.getElementById('subjectSelectionArea').style.display = 'none';
                 document.getElementById('testButtons').style.display = 'block';
                 document.getElementById('quizContainer').style.display = 'block'; // Show quiz container
+                document.getElementById('subjectSearch').style.display = 'none';
                 document.getElementById('quizTitle').textContent = `${subject} Quiz`; // Update quiz title
                 loadQuestion();
             }
@@ -590,7 +620,7 @@
                 quizData = JSON.parse(JSON.stringify(quizDataOriginal[subject]));
                 selectSubject(subject); // Automatically select the subject if valid
             } else {
-                renderSubjectTiles();
+                renderSubjectTiles('');
                 document.getElementById('quizContainer').style.display = 'none';
             }
             let durationSec = 0;
@@ -655,7 +685,8 @@
                     inp.addEventListener('change', (e) => {
                         if (quizSubmitted) return; // Prevent interaction after submission
                         answers[current] = parseInt(e.target.value);
-                        // if previously skipped remove skip mark
+                    updateLeaveButtonState(); // Update leave button state
+                // if previously skipped remove skip mark
                         if (skipped.has(current)) skipped.delete(current);
                         updateCounts();
                         updateSubmissionStatus(); // Call this after an answer is selected
@@ -748,15 +779,28 @@
                 refreshConfirmModal.show();
             });
 
+            // leave button
+            document.getElementById('leaveBtn').addEventListener('click', () => {
+                leaveConfirmModal.show();
+            });
+
             // confirm refresh button
             document.getElementById('confirmRefreshBtn').addEventListener('click', () => {
                 location.reload();
+            });
+
+            // confirm leave button
+            document.getElementById('confirmLeaveBtn').addEventListener('click', () => {
+                leaveConfirmModal.hide();
+                stopTimer(); // Stop the timer when leaving the test
+                showScore(); // Show the scorecard
             });
             let reviewModal = null;
             let scoreModal = null;
             let retakeConfirmModal = null;
             let customSettingsModal = null; // Initialize custom settings modal
             let refreshConfirmModal = null; // New modal for refresh confirmation
+            let leaveConfirmModal = null; // New modal for leave confirmation
 
             try {
                 reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
@@ -764,6 +808,7 @@
                 retakeConfirmModal = new bootstrap.Modal(document.getElementById('retakeConfirmModal'));
                 customSettingsModal = new bootstrap.Modal(document.getElementById('customSettingsModal')); // New modal
                 refreshConfirmModal = new bootstrap.Modal(document.getElementById('refreshConfirmModal')); // New modal
+                leaveConfirmModal = new bootstrap.Modal(document.getElementById('leaveConfirmModal')); // New modal
             } catch (err) { console.warn('Unable to initialize bootstrap modals:', err); }
 
             function populateReviewLists() {
@@ -1025,17 +1070,26 @@
                 });
 
                 const scoreSummary = document.getElementById('scoreSummary');
-                scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${quizData.length}</h4><div class='small text-muted'>Answered: ${answers.filter(a => a !== null).length - skippedCount}</div><div class='small text-muted'>Skipped: ${skippedCount}</div>`;
-                if (enableTimer) {
-                    scoreSummary.innerHTML += `<div class='small text-muted'>Time taken: ${formatTime(durationSec - (parseInt(document.getElementById('timer').innerText.split(':')[0]) * 60 + parseInt(document.getElementById('timer').innerText.split(':')[1])))}</div>`;
-                } else {
-                    scoreSummary.innerHTML += `<div class='small text-muted'>Timer: Disabled</div>`;
-                }
+                scoreSummary.innerHTML = `<h4>Your score: ${correct} / ${quizData.length}</h4>
+                <div class="d-flex justify-content-around mt-3">
+                    <div class="p-2 border rounded text-center">
+                        <strong>Answered:</strong> ${answers.filter(a => a !== null).length - skippedCount}
+                    </div>
+                    <div class="p-2 border rounded text-center">
+                        <strong>Skipped:</strong> ${skippedCount}
+                    </div>
+                    ${enableTimer ? `<div class="p-2 border rounded text-center">
+                        <strong>Time taken:</strong> ${formatTime(durationSec - (parseInt(document.getElementById('timer').innerText.split(':')[0]) * 60 + parseInt(document.getElementById('timer').innerText.split(':')[1])))}
+                    </div>` : `<div class="p-2 border rounded text-center">
+                        <strong>Timer:</strong> Disabled
+                    </div>`}
+                </div>`;
 
 
                 const detailed = document.getElementById('detailedReport'); detailed.innerHTML = '';
                 details.forEach(d => {
-                    const wrap = document.createElement('div'); wrap.className = 'mb-3 p-2 border rounded';
+                    if (d.user !== null) { // Only show answered questions
+                        const wrap = document.createElement('div'); wrap.className = 'mb-3 p-2 border rounded';
                     const qh = document.createElement('div'); qh.innerHTML = `<strong>Q${d.i + 1}.</strong> ${d.question.replace(/\$/g, '')} ${d.isSkipped ? '<span class="badge bg-info">Skipped</span>' : ''}`;
                     qh.className = 'mb-2';
                     wrap.appendChild(qh);
@@ -1052,6 +1106,7 @@
                     const ex = document.createElement('div'); ex.className = 'mt-2 explain'; ex.innerHTML = `<strong class='text-primary'>Explanation:</strong> ${boldExplanation}`;
                     wrap.appendChild(ul); wrap.appendChild(ex);
                     detailed.appendChild(wrap);
+                    }
                 });
 
                 safeShowModal(scoreModal, 'scoreModal');
@@ -1062,6 +1117,14 @@
                 const m = Math.floor(seconds / 60).toString().padStart(2, '0');
                 const s = (seconds % 60).toString().padStart(2, '0');
                 return `${m}:${s}`;
+            }
+
+            function updateLeaveButtonState() {
+                const leaveBtn = document.getElementById('leaveBtn');
+                const answeredCount = answers.filter(a => a !== null).length;
+                if (leaveBtn) {
+                    leaveBtn.disabled = answeredCount === 0;
+                }
             }
 
             // Global variable to store initial quiz settings for retake functionality
@@ -1085,6 +1148,7 @@
 
                 // reset answers/flags/skips AFTER quizData is finalized
                 answers = Array(quizData.length).fill(null);
+                updateLeaveButtonState(); // Initialize leave button state
                 flagged = Array(quizData.length).fill(false);
                 skipped = new Set();
                 currentSkips = 0;
@@ -1388,15 +1452,17 @@
                 skipSettingsDiv.style.display = 'none';
             }
 
+            const subjectSearchInput = document.getElementById('subjectSearch');
+            subjectSearchInput.addEventListener('input', function() {
+                renderSubjectTiles(this.value);
+            });
+
         }); // End of DOMContentLoaded
     </script>
+    <div class="alert alert-danger" role="alert" id="warningMessage" style="display: none;">
+        Please answer all non-skipped questions before final submit.
+    </div>
+    <div class="container mt-4">
+    </div>
 </body>
-
 </html>
-
-<div class="alert alert-danger" role="alert" id="warningMessage" style="display: none;">
-    Please answer all non-skipped questions before final submit.
-</div>
-
-<div class="container mt-4">
-</div>
