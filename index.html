@@ -8,8 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="data.js"></script>
     <style>
-       
-
         body {
             padding: 20px;
             background: #f8f9fa
@@ -90,6 +88,14 @@
 
         .wrong {
             color: red
+        }
+
+        .green-color {
+            background-color: #d2f8db;
+        }
+
+        .red-color {
+            background-color: #f8d2d5;
         }
     </style>
 </head>
@@ -186,7 +192,7 @@
     <!-- Retake Confirmation Modal -->
     <div class="modal fade" id="retakeConfirmModal" tabindex="-1" aria-labelledby="retakeConfirmModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog ">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="retakeConfirmModalLabel">Confirm Retake</h5>
@@ -310,7 +316,7 @@
     <!-- Custom Settings Modal -->
     <div class="modal fade" id="customSettingsModal" tabindex="-1" aria-labelledby="customSettingsModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="customSettingsModalLabel">Custom Test Settings</h5>
@@ -639,7 +645,7 @@
             function render() {
                 const q = quizData[current];
                 const container = document.getElementById('questionArea');
-                container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current + 1}.</strong> ${q.question}</div>\n        <div><span class=\"badge bg-${flagged[current] ? 'warning' : (skipped.has(current) ? 'info' : 'secondary')}\">${flagged[current] ? 'Flagged' : (skipped.has(current) ? 'Skipped' : 'Not flagged')}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt, idx) => `\n        <label class=\"option-label border p-2 mb-2 ${answers[current] === idx ? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current] === idx ? 'checked' : ''} style=\"margin-right:8px\"> ${opt}\n        </label>\n      `).join('')}</div>\n      ${skipped.has(current) ? '<div class=\"small text-muted mt-2\">Select option to remove from skip</div>' : ''}\n\n    `;
+                container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current + 1}.</strong> ${q.question.replace(/\$/g, '')}</div>\n        <div><span class=\"badge bg-${flagged[current] ? 'warning' : (skipped.has(current) ? 'info' : 'secondary')}\">${flagged[current] ? 'Flagged' : (skipped.has(current) ? 'Skipped' : '')}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt, idx) => `\n        <label class=\"option-label border p-2 mb-2 ${answers[current] === idx ? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current] === idx ? 'checked' : ''} style=\"margin-right:8px\"> ${opt.replace(/\$/g, '')}\n        </label>\n      `).join('')}</div>\n      ${skipped.has(current) ? '<div class=\"small text-muted mt-2\">Select option to remove from skip</div>' : ''}\n\n    `;
 
                 document.getElementById('qIndex').innerText = `Question ${current + 1} of ${quizData.length}`;
                 updateCounts();
@@ -777,8 +783,7 @@
                     li.classList.add('list-group-item', 'list-group-item-action');
                     li.dataset.questionIndex = i;
                     const questionText = q.question.length > 50 ? q.question.slice(0, 50) + '...' : q.question;
-                    li.innerText = `Q${i + 1}: ${questionText}`;
-                    li.addEventListener('click', (event) => {
+                    li.innerText = `Q${i + 1}: ${questionText.replace(/\$/g, '')}`; li.addEventListener('click', (event) => {
                         // Prevent redirection if the click originated from a radio button or its label
                         if (event.target.tagName === 'INPUT' && event.target.type === 'radio' || event.target.tagName === 'LABEL') {
                             return;
@@ -800,17 +805,17 @@
                         const optionsHtml = q.options.map((option, optIndex) => {
                             const isChecked = (optIndex === selectedOptionIndex) ? 'checked' : '';
                             return `
-            <div class="form-check">
+            <div class="form-check ">
               <input class="form-check-input" type="radio" name="reviewQuestion${i}" id="reviewQuestion${i}Option${optIndex}" value="${optIndex}" ${isChecked} onclick="event.stopPropagation();">
               <label class="form-check-label" for="reviewQuestion${i}Option${optIndex}" onclick="event.stopPropagation();">
-                ${option}
+                ${option.replace(/\$/g, '')}
               </label>
             </div>
           `;
                         }).join('');
 
                         li.innerHTML = `
-          <div>Q${i + 1}: ${questionText}</div>
+          <div>Q${i + 1}: ${questionText.replace(/\$/g, '')}</div>
           <div class="options-container mt-2">${optionsHtml}</div>
         `;
                         answeredList.appendChild(li);
@@ -1031,18 +1036,20 @@
                 const detailed = document.getElementById('detailedReport'); detailed.innerHTML = '';
                 details.forEach(d => {
                     const wrap = document.createElement('div'); wrap.className = 'mb-3 p-2 border rounded';
-                    const qh = document.createElement('div'); qh.innerHTML = `<strong>Q${d.i + 1}.</strong> ${d.question} ${d.isSkipped ? '<span class="badge bg-info">Skipped</span>' : ''}`;
+                    const qh = document.createElement('div'); qh.innerHTML = `<strong>Q${d.i + 1}.</strong> ${d.question.replace(/\$/g, '')} ${d.isSkipped ? '<span class="badge bg-info">Skipped</span>' : ''}`;
+                    qh.className = 'mb-2';
                     wrap.appendChild(qh);
                     const ul = document.createElement('div');
                     d.options.forEach((opt, j) => {
-                        const p = document.createElement('div');
-                        p.innerText = opt;
-                        if (j === d.correctIndex) p.className = 'correct';
-                        if (d.user === j && !d.isCorrect) p.className = 'wrong';
-                        if (d.user === j && d.isCorrect) p.className = 'correct';
+                        const p = document.createElement('div'); p.className = 'option-label border p-2 mb-2';
+                        p.innerText = opt.replace(/\$/g, '');
+                        if (j === d.correctIndex) p.className = 'correct green-color option-label border p-2 mb-2';
+                        if (d.user === j && !d.isCorrect) p.className = 'wrong red-color option-label border p-2 mb-2';
+                        if (d.user === j && d.isCorrect) p.className = 'correct green-color option-label border p-2 mb-2';
                         ul.appendChild(p);
                     });
-                    const ex = document.createElement('div'); ex.className = 'mt-2 explain'; ex.innerHTML = `<strong>Explanation:</strong> ${d.explanation}`;
+                    const boldExplanation = d.explanation.replace(/\$/g, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    const ex = document.createElement('div'); ex.className = 'mt-2 explain'; ex.innerHTML = `<strong class='text-primary'>Explanation:</strong> ${boldExplanation}`;
                     wrap.appendChild(ul); wrap.appendChild(ex);
                     detailed.appendChild(wrap);
                 });
@@ -1219,6 +1226,18 @@
             });
             decreaseTimerDurationBtn.addEventListener('mouseup', stopHolding);
             decreaseTimerDurationBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            decreaseTimerDurationBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(timerDurationInput.value);
+                    if (currentValue > parseInt(timerDurationInput.min)) {
+                        timerDurationInput.value = currentValue - 1;
+                    }
+                });
+            });
+            decreaseTimerDurationBtn.addEventListener('touchend', stopHolding);
+            decreaseTimerDurationBtn.addEventListener('touchcancel', stopHolding);
+            decreaseTimerDurationBtn.addEventListener('touchleave', stopHolding);
 
             increaseTimerDurationBtn.addEventListener('mousedown', function () {
                 startHolding(function () {
@@ -1230,6 +1249,18 @@
             });
             increaseTimerDurationBtn.addEventListener('mouseup', stopHolding);
             increaseTimerDurationBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            increaseTimerDurationBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(timerDurationInput.value);
+                    if (currentValue < parseInt(timerDurationInput.max) || isNaN(parseInt(timerDurationInput.max))) {
+                        timerDurationInput.value = currentValue + 1;
+                    }
+                });
+            });
+            increaseTimerDurationBtn.addEventListener('touchend', stopHolding);
+            increaseTimerDurationBtn.addEventListener('touchcancel', stopHolding);
+            increaseTimerDurationBtn.addEventListener('touchleave', stopHolding);
 
             const numQuestionsInput = document.getElementById('numQuestions');
             const decreaseNumQuestionsBtn = document.getElementById('decreaseNumQuestions');
@@ -1255,6 +1286,18 @@
             });
             decreaseNumQuestionsBtn.addEventListener('mouseup', stopHolding);
             decreaseNumQuestionsBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            decreaseNumQuestionsBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(numQuestionsInput.value);
+                    if (currentValue > parseInt(numQuestionsInput.min)) {
+                        numQuestionsInput.value = currentValue - 1;
+                    }
+                });
+            });
+            decreaseNumQuestionsBtn.addEventListener('touchend', stopHolding);
+            decreaseNumQuestionsBtn.addEventListener('touchcancel', stopHolding);
+            decreaseNumQuestionsBtn.addEventListener('touchleave', stopHolding);
 
             increaseNumQuestionsBtn.addEventListener('mousedown', function () {
                 startHolding(function () {
@@ -1266,6 +1309,18 @@
             });
             increaseNumQuestionsBtn.addEventListener('mouseup', stopHolding);
             increaseNumQuestionsBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            increaseNumQuestionsBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(numQuestionsInput.value);
+                    if (currentValue < parseInt(numQuestionsInput.max) || isNaN(parseInt(numQuestionsInput.max))) {
+                        numQuestionsInput.value = currentValue + 1;
+                    }
+                });
+            });
+            increaseNumQuestionsBtn.addEventListener('touchend', stopHolding);
+            increaseNumQuestionsBtn.addEventListener('touchcancel', stopHolding);
+            increaseNumQuestionsBtn.addEventListener('touchleave', stopHolding);
 
             const decreaseSkipCountBtn = document.getElementById('decreaseSkipCount');
             const increaseSkipCountBtn = document.getElementById('increaseSkipCount');
@@ -1282,6 +1337,18 @@
             });
             decreaseSkipCountBtn.addEventListener('mouseup', stopHolding);
             decreaseSkipCountBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            decreaseSkipCountBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(skipCountInput.value);
+                    if (currentValue > parseInt(skipCountInput.min)) {
+                        skipCountInput.value = currentValue - 1;
+                    }
+                });
+            });
+            decreaseSkipCountBtn.addEventListener('touchend', stopHolding);
+            decreaseSkipCountBtn.addEventListener('touchcancel', stopHolding);
+            decreaseSkipCountBtn.addEventListener('touchleave', stopHolding);
 
             increaseSkipCountBtn.addEventListener('mousedown', function () {
                 startHolding(function () {
@@ -1293,6 +1360,18 @@
             });
             increaseSkipCountBtn.addEventListener('mouseup', stopHolding);
             increaseSkipCountBtn.addEventListener('mouseleave', stopHolding); // Stop if mouse leaves button while holding
+            increaseSkipCountBtn.addEventListener('touchstart', function (e) {
+                e.preventDefault(); // Prevent default touch behavior (like scrolling)
+                startHolding(function () {
+                    let currentValue = parseInt(skipCountInput.value);
+                    if (currentValue < parseInt(skipCountInput.max) || isNaN(parseInt(skipCountInput.max))) {
+                        skipCountInput.value = currentValue + 1;
+                    }
+                });
+            });
+            increaseSkipCountBtn.addEventListener('touchend', stopHolding);
+            increaseSkipCountBtn.addEventListener('touchcancel', stopHolding);
+            increaseSkipCountBtn.addEventListener('touchleave', stopHolding);
 
 
 
