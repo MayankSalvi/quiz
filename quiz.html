@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 
@@ -97,6 +98,16 @@
         .red-color {
             background-color: #f8d2d5;
         }
+
+        .progress-bar {
+            background-color: #007bff;
+            transition: width .6s ease;
+            height: 100%; /* Ensure it fills the container height */
+        }
+
+        .no-padding-col {
+            padding: 0 !important;
+        }
     </style>
 </head>
 
@@ -105,7 +116,7 @@
 
         <!-- fine  -->
         <div class="row mb-2">
-            <div class="col-md-12">
+            <div class="col-md-12 no-padding-col">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 id="quizTitle" class="mb-0">Practice quiz</h3>
                     <input type="text" id="subjectSearch" class="form-control w-50" placeholder="Search subject...">
@@ -129,6 +140,11 @@
                         <button id="refreshBtn" class="btn btn-primary btn-sm">Refresh</button>
                 <button id="leaveBtn" class="btn btn-danger btn-sm ms-2" disabled>Leave</button>
                     </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="progressBarContainer" class="progress mt-3 d-none" style="height: 10px;">
+                    <div id="progressBar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
@@ -186,11 +202,13 @@
         </div>
     </div>
 
-    <div class="mt-3" id="statusBar" style="display:none;">
-        <span id="qIndex"></span>
-        <span class="ms-3">Answered: <span id="answeredCount">0</span></span>
-        <span class="ms-3">Flagged: <span id="flaggedCount">0</span></span>
-        <span class="ms-3">Skipped: <span id="skippedCount">0</span></span>
+    <div class="mt-3 card" id="statusBar" style="display:none;">
+        <div class="card-body d-flex justify-content-around align-items-center py-2">
+            <span id="qIndex" class="fw-bold"></span>
+            <span class="ms-3">Answered <span id="answeredCount" class="badge bg-success rounded-pill">0</span></span>
+            <span class="ms-3">Flagged <span id="flaggedCount" class="badge bg-info rounded-pill">0</span></span>
+            <span class="ms-3">Skipped <span id="skippedCount" class="badge bg-warning rounded-pill">0</span></span>
+        </div>
     </div>
 
     <!-- Retake Confirmation Modal -->
@@ -597,6 +615,8 @@
                 document.getElementById('subjectSearch').style.display = 'none';
                 document.getElementById('quizTitle').textContent = `${subject} Quiz`; // Update quiz title
                 loadQuestion();
+               
+                updateProgressBar(); // Initialize progress bar
             }
 
             function loadQuestion() {
@@ -673,6 +693,9 @@
 
             // render question
             function render() {
+                 document.getElementById('testButtons').style.display = 'none';
+                 document.getElementById('progressBarContainer').classList.remove('d-none'); // Show progress bar after quiz is loaded
+
                 const q = quizData[current];
                 const container = document.getElementById('questionArea');
                 container.innerHTML = `\n      <div class=\"d-flex justify-content-between\"> \n        <div><strong>Q${current + 1}.</strong> ${q.question.replace(/\$/g, '')}</div>\n        <div><span class=\"badge bg-${flagged[current] ? 'warning' : (skipped.has(current) ? 'info' : 'secondary')}\">${flagged[current] ? 'Flagged' : (skipped.has(current) ? 'Skipped' : '')}</span></div>\n      </div>\n      <div class=\"mt-3\">${q.options.map((opt, idx) => `\n        <label class=\"option-label border p-2 mb-2 ${answers[current] === idx ? 'border-primary' : ''}\">\n          <input type=\"radio\" name=\"opt\" value=\"${idx}\" ${answers[current] === idx ? 'checked' : ''} style=\"margin-right:8px\"> ${opt.replace(/\$/g, '')}\n        </label>\n      `).join('')}</div>\n      ${skipped.has(current) ? '<div class=\"small text-muted mt-2\">Select option to remove from skip</div>' : ''}\n\n    `;
@@ -734,6 +757,18 @@
                     }
                 }
                 updateSubmissionStatus(); // Call this after rendering the question
+                updateProgressBar();
+            }
+
+            function updateProgressBar() {
+                const progressBar = document.getElementById('progressBar');
+                const totalQuestions = quizData.length;
+                const answeredCount = answers.filter(a => a !== null).length; // Get answered count
+                const progress = (answeredCount / totalQuestions) * 100; // Calculate progress based on answered questions
+                console.log('Progress calculated:', progress);
+                progressBar.style.width = progress + '%';
+                console.log('Progress bar width set to:', progressBar.style.width);
+                progressBar.setAttribute('aria-valuenow', progress);
             }
 
             function updateCounts() {
@@ -963,6 +998,10 @@
                     remaining = durationSec; // For whole test, use the global durationSec
                 }
 
+                // Start background color transition for the current timer window
+                stopColorTransition();
+                startColorTransition(remaining * 1000);
+
                 updateTimerDisplay(remaining);
                 timerInterval = setInterval(() => {
                     remaining--;
@@ -991,14 +1030,59 @@
                             // }
                         } else {
                             // Handle whole test timer expiry
-                            alert('Time up! Submitting automatically.');
+                            var timeUpModal = new bootstrap.Modal(document.getElementById('timeUpModal'));
+                            timeUpModal.show();
                             showScore();
                         }
                     }
                     updateTimerDisplay(remaining);
                 }, 1000);
             }
-            function stopTimer() { if (timerInterval) clearInterval(timerInterval); }
+            function stopTimer() { if (timerInterval) clearInterval(timerInterval); stopColorTransition(); }
+
+            // Color transition helpers (quiz page only)
+            let colorAnimationId = null;
+            let colorTransitionStop = true;
+
+            function startColorTransition(duration) {
+                // Only run on quiz page
+                const quizEl = document.getElementById('quizContainer');
+                if (!quizEl || quizEl.style.display !== 'block') return;
+
+                colorTransitionStop = false;
+                const startColor = { r: 210, g: 248, b: 219 }; // #d2f8db
+                const endColor   = { r: 248, g: 210, b: 213 }; // #f8d2d5
+
+                const startTime = Date.now();
+                document.body.style.backgroundColor = `rgb(${startColor.r}, ${startColor.g}, ${startColor.b})`;
+
+                function updateColor() {
+                    if (colorTransitionStop) return;
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1); // 0 → 1
+
+                    // Linear interpolation (lerp)
+                    const r = Math.round(startColor.r + (endColor.r - startColor.r) * progress);
+                    const g = Math.round(startColor.g + (endColor.g - startColor.g) * progress);
+                    const b = Math.round(startColor.b + (endColor.b - startColor.b) * progress);
+
+                    document.body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+
+                    if (progress < 1 && !colorTransitionStop) {
+                        colorAnimationId = requestAnimationFrame(updateColor);
+                    }
+                }
+
+                updateColor();
+            }
+
+            function stopColorTransition() {
+                colorTransitionStop = true;
+                if (colorAnimationId) {
+                    cancelAnimationFrame(colorAnimationId);
+                    colorAnimationId = null;
+                }
+            }
 
             function nextQuestion() {
                 if (current < quizData.length - 1) {
@@ -1464,5 +1548,23 @@
     </div>
     <div class="container mt-4">
     </div>
+    <div class="modal fade" id="timeUpModal" tabindex="-1" aria-labelledby="timeUpModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="timeUpModalLabel">Time's Up!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Time up! Submitting automatically.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
